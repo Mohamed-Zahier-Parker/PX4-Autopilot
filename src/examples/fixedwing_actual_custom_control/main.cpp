@@ -605,6 +605,13 @@ void Controllers::guide_axis_alg(float S[2],float D[2],const Control_Data &state
 
 void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_size,const Control_Data &state_data,float out[2][2]) //!!!COMPLETE!!!
 {
+	if(Abort && !Anti_Abort){
+       		//Reset waypoints
+       		_loc_guide=1;
+		_x_guide=0;
+       		waypoint_END=false;
+		std::cout<<"Abort\n";
+	}
 	L_track=sqrt(pow((Destinations[_loc_guide][1]-Destinations[_loc_guide-1][1]),2)+pow((Destinations[_loc_guide][0]-Destinations[_loc_guide-1][0]),2));//Track length
 	if(_x_guide>L_track && _loc_guide!=Destination_size){
         	if(_loc_guide!=(Destination_size-1))//If not final destination then update waypoints
@@ -629,13 +636,6 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
 			waypoint_END=true;
 	}
 	}
-	if(Abort && !Anti_Abort){
-       		//Reset waypoints
-       		_loc_guide=1;
-       		waypoint_END=false;
-		std::cout<<"Abort\n";
-	}
-
 }
 
 void Controllers::navigation_controller(float D[][2],int Destination_size,const Control_Data &state_data,float out[4])
@@ -816,6 +816,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4]){
 //      if(state==3){ //Testing Abort
 //          Abort=true;
 //      }
+
 	h_ref_SM=ref_out[0];
 	if(state<2){
 		state_data.hdot_bar_ref=0;
@@ -1034,7 +1035,7 @@ void Controllers::Run()
 
 					//Lateral Controllers
 					//Waypoints
-					//float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-500,0},{0,0}};//Rectangle
+					// float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-500,0},{0,0}};//Rectangle
 					// float destinations[][2]={{0,0},{15000,0}};//Straight flight
 					float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{0,0}};//Landing testing Rectangle
 					int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
