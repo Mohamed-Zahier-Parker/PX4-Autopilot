@@ -786,7 +786,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4]){
 	    		//ref_out order: h_ref, vbar_ref, y_ref, yaw_ref
 			break;
         	case 1 : //Final Approach
-            		ref_out[0]=17.5;ref_out[1]=-2;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=17.5;ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 2 : //Glideslope Tracking
@@ -952,7 +952,7 @@ void Controllers::Run()
 		control_input.p=ang_vel.xyz[0];
 		control_input.q=ang_vel.xyz[1];
 		control_input.r=ang_vel.xyz[2];
-		control_input.airspeed=airspeed.true_airspeed_m_s;//check
+		control_input.airspeed=airspeed.equivalent_airspeed_m_s;//check
 		// control_input.airspeed=airspeed.true_airspeed_m_s;//check
 		control_input.alpha=alpha;
 		control_input.beta=beta;
@@ -1161,42 +1161,47 @@ void Controllers::Run()
 					state_log.push_back(state);
 					hdot_log.push_back(control_input.h_dot);
 					hdot_bar_ref_log.push_back(control_input.hdot_bar_ref);
+					airspeed_log.push_back(control_input.airspeed);
 				}
 
-				// if(Log_data==true){
-				// 	myfile.open("/home/alan/Documents/PX4_Graph_Plotting_Code/Python_code_to_plot_cpp_log_data/Landing_Procedure_Data.txt");
-				// 	int sizex =x_log.size();
-				// 	int sizez=z_log.size();
-				// 	int sizestate=state_log.size();
-				// 	int sizehdot=hdot_log.size();
-				// 	for(int i=0;i<sizex;i++){
-				// 		myfile<<x_log[i]<<",";
-				// 	}
-				// 	myfile<<"\n";
-				// 	for(int i=0;i<sizez;i++){
-				// 		myfile<<z_log[i]<<",";
-				// 	}
-				// 	myfile<<"\n";
-				// 	myfile<<sizex;
-				// 	myfile<<"\n";
-				// 	myfile<<sizez;
-				// 	myfile<<"\n";
-				// 	myfile<<L_track;
-				// 	myfile<<"\n";
-				// 	for(int i=0;i<sizestate;i++){
-				// 		myfile<<state_log[i]<<",";
-				// 	}
-				// 	myfile<<"\n";
-				// 	for(int i=0;i<sizehdot;i++){
-				// 		myfile<<hdot_log[i]<<",";
-				// 	}
-				// 	myfile<<"\n";
-				// 	for(int i=0;i<sizehdot;i++){
-				// 		myfile<<hdot_bar_ref_log[i]<<",";
-				// 	}
-				// 	myfile.close();
-				// 	Log_data=false;
-				// }
+				if(Log_data==true){
+					myfile.open("/home/alan/Documents/PX4_Graph_Plotting_Code/Python_code_to_plot_cpp_log_data/Landing_Procedure_Data.txt");
+					int sizex =x_log.size();
+					int sizez=z_log.size();
+					int sizestate=state_log.size();
+					int sizehdot=hdot_log.size();
+					for(int i=0;i<sizex;i++){
+						myfile<<x_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizez;i++){
+						myfile<<z_log[i]<<",";
+					}
+					myfile<<"\n";
+					myfile<<sizex;
+					myfile<<"\n";
+					myfile<<sizez;
+					myfile<<"\n";
+					myfile<<L_track;
+					myfile<<"\n";
+					for(int i=0;i<sizestate;i++){
+						myfile<<state_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<hdot_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<hdot_bar_ref_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<airspeed_log[i]<<",";
+					}
+					myfile.close();
+					Log_data=false;
+				}
 
 
 

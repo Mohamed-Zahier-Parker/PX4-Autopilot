@@ -202,7 +202,7 @@ private:
 	int state=0;
 	//Graph Plotting
 	ofstream myfile;
-	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log;
+	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log;
 	std::vector<int> state_log;
 
 	DEFINE_PARAMETERS(
