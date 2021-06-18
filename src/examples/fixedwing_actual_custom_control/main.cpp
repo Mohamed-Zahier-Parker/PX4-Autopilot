@@ -1166,7 +1166,8 @@ void Controllers::Run()
 				}
 
 				if(Log_data==true){
-					myfile.open("/home/alan/Documents/PX4_Graph_Plotting_Code/Python_code_to_plot_cpp_log_data/Landing_Procedure_Data.txt");
+					// myfile.open("/home/alan/Documents/PX4_Graph_Plotting_Code/Python_code_to_plot_cpp_log_data/Landing_Procedure_Data.txt");//ESL PC
+					myfile.open("/home/mohzap/Documents/PX4_python_logger/Landing_Procedure_Data.txt");//My PC
 					int sizex =x_log.size();
 					int sizez=z_log.size();
 					int sizestate=state_log.size();
