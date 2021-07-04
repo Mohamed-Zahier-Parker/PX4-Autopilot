@@ -102,6 +102,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_trajectory_bezier.h>
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
+#include <uORB/topics/key_command.h>
 
 class Mavlink;
 
@@ -179,6 +180,7 @@ private:
 	void handle_message_utm_global_position(mavlink_message_t *msg);
 	void handle_message_vision_position_estimate(mavlink_message_t *msg);
 	void handle_message_onboard_computer_status(mavlink_message_t *msg);
+	void handle_message_key_command(mavlink_message_t *msg);
 
 
 	void Run();
@@ -310,6 +312,8 @@ private:
 
 	// Allocated if needed.
 	TunePublisher *_tune_publisher{nullptr};
+
+	orb_advert_t _key_command_pub{nullptr};
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::BAT_CRIT_THR>)     _param_bat_crit_thr,

@@ -167,6 +167,7 @@ set(msg_files
 	wheel_encoders.msg
 	wind_estimate.msg
 	yaw_estimator_status.msg
+	key_command.msg
 )
 
 set(deprecated_msgs

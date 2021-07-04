@@ -52,6 +52,7 @@ px4_add_board(
 		vmount
 		vtol_att_control
 		uuv_att_control
+		key_receiver
 
 	SYSTEMCMDS
 		#dumpfile
