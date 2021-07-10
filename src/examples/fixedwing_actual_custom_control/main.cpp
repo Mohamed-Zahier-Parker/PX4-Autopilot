@@ -972,9 +972,9 @@ void Controllers::Run()
 		mpc_out_sub.copy(&mpc_out);
 
 		// TESTING
-		// if(disp_count%10==0){
-		// 	std::cout<<"MPC_mv_0 : "<<mpc_out.mpc_mv_out[0]<<" MPC_mv_1 : "<<mpc_out.mpc_mv_out[1]<<"\n";
-		// }
+		if(disp_count%10==0){
+			std::cout<<"MPC_mv_0 : "<<mpc_out.mpc_mv_out[0]<<" MPC_mv_1 : "<<mpc_out.mpc_mv_out[1]<<"\n";
+		}
 
 
 		/*get alpha and beta*/
@@ -1295,6 +1295,8 @@ void Controllers::Run()
 				// printf("Controllers\n");
 				// printf("dA : %.5f ; dE : %.5f ; dR : %.5f ; dT : %.5f\n",(double)dA,(double)dE,(double)dR,(double)dT);
 				// printf("\n");
+
+
 	}
 
 	}else{
@@ -1368,6 +1370,7 @@ void Controllers::Run()
 		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_mo_in[0]<<" ; "<<mpc_ins.mpc_mo_in[1]<<"\n";
 
 		mpc_in_pub.publish(mpc_ins);
+
 
 		/* sanity check and publish actuator outputs */
 		if (PX4_ISFINITE(actuators.control[0]) &&
