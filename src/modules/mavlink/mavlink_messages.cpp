@@ -118,6 +118,8 @@
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
 #include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/wind_estimate.h>
+#include <uORB/topics/mpc_inputs.h>
+#include <iostream>
 
 using matrix::Vector3f;
 using matrix::wrap_2pi;
@@ -5243,6 +5245,83 @@ protected:
 	}
 };
 
+class MavlinkStreamMPCInputs : public MavlinkStream
+{
+public:
+	const char *get_name() const override
+	{
+		return MavlinkStreamMPCInputs::get_name_static();
+	}
+
+	static constexpr const char *get_name_static()
+	{
+		return "MPC_INPUTS";
+	}
+
+	static constexpr uint16_t get_id_static()
+	{
+		return MAVLINK_MSG_ID_MPC_INPUTS;
+	}
+
+	uint16_t get_id() override
+	{
+		return get_id_static();
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamMPCInputs(mavlink);
+	}
+
+	unsigned get_size() override
+	{
+		return _mpc_in_sub.advertised() ? MAVLINK_MSG_ID_MPC_INPUTS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
+	}
+
+private:
+	uORB::Subscription _mpc_in_sub{ORB_ID(mpc_inputs)};
+
+	/* do not allow top copying this class */
+	MavlinkStreamMPCInputs(MavlinkStreamMPCInputs &) = delete;
+	MavlinkStreamMPCInputs &operator = (const MavlinkStreamMPCInputs &) = delete;
+
+protected:
+	explicit MavlinkStreamMPCInputs(Mavlink *mavlink) : MavlinkStream(mavlink)
+	{}
+
+	bool send(const hrt_abstime t) override
+	{
+		mavlink_mpc_inputs_t msg{};
+
+		for(int i=0;i<38;i++){
+			msg.mpc_ref_in[i] = NAN;
+		}
+		msg.mpc_mo_in[0] = NAN;
+		msg.mpc_mo_in[1] = NAN;
+
+		bool mpc_inputs_updated = false;
+		mpc_inputs_s mpc_inputs_data{};
+
+		if (_mpc_in_sub.update(&mpc_inputs_data)) {
+			for(int i=0;i<38;i++){
+				msg.mpc_ref_in[i] = mpc_inputs_data.mpc_ref_in[i];
+			}
+			msg.mpc_mo_in[0] = mpc_inputs_data.mpc_mo_in[0];
+			msg.mpc_mo_in[1] = mpc_inputs_data.mpc_mo_in[1];
+			mpc_inputs_updated = true;
+		}
+
+		if (mpc_inputs_updated) {
+			msg.time_usec = hrt_absolute_time();
+			mavlink_msg_mpc_inputs_send_struct(_mavlink->get_channel(), &msg);
+			// std::cout<<"PX4 MPC_inputs publish: "<<msg.mpc_ref_in[0]<<" ; "<<msg.mpc_mo_in[0]<<"\n";
+			return true;
+		}
+
+		return false;
+	}
+};
+
 static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamHeartbeat>(),
 	create_stream_list_item<MavlinkStreamStatustext>(),
@@ -5307,7 +5386,8 @@ static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamProtocolVersion>(),
 	create_stream_list_item<MavlinkStreamFlightInformation>(),
 	create_stream_list_item<MavlinkStreamStorageInformation>(),
-	create_stream_list_item<MavlinkStreamRawRpm>()
+	create_stream_list_item<MavlinkStreamRawRpm>(),
+	create_stream_list_item<MavlinkStreamMPCInputs>()
 };
 
 const char *get_stream_name(const uint16_t msg_id)

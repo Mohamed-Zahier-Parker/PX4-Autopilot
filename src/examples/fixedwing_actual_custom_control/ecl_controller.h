@@ -192,4 +192,8 @@ protected:
 	float _min_deflection;
 	float _max_deflection;
 	float L_track=0;
+	float Ki_alt_lim;
+	float _intergrator_alt_lim;
+	float _min_alt_lim;
+	float _max_alt_lim;
 };

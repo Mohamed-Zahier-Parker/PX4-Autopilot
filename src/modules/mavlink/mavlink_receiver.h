@@ -103,6 +103,9 @@
 #include <uORB/topics/vehicle_trajectory_bezier.h>
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
 #include <uORB/topics/key_command.h>
+#include <uORB/topics/mpc_outputs.h>
+
+#include <algorithm>
 
 class Mavlink;
 
@@ -181,6 +184,8 @@ private:
 	void handle_message_vision_position_estimate(mavlink_message_t *msg);
 	void handle_message_onboard_computer_status(mavlink_message_t *msg);
 	void handle_message_key_command(mavlink_message_t *msg);
+	void handle_message_mpc_outputs(mavlink_message_t *msg);
+
 
 
 	void Run();
@@ -262,6 +267,7 @@ private:
 	uORB::Publication<vehicle_rates_setpoint_s>		_rates_sp_pub{ORB_ID(vehicle_rates_setpoint)};
 	uORB::Publication<vehicle_trajectory_bezier_s>	_trajectory_bezier_pub{ORB_ID(vehicle_trajectory_bezier)};
 	uORB::Publication<vehicle_trajectory_waypoint_s>	_trajectory_waypoint_pub{ORB_ID(vehicle_trajectory_waypoint)};
+	uORB::Publication<mpc_outputs_s>			_mpc_outputs_pub{ORB_ID(mpc_outputs)};
 
 	// ORB publications (multi)
 	uORB::PublicationMulti<distance_sensor_s>		_distance_sensor_pub{ORB_ID(distance_sensor), ORB_PRIO_LOW};
@@ -314,6 +320,7 @@ private:
 	TunePublisher *_tune_publisher{nullptr};
 
 	orb_advert_t _key_command_pub{nullptr};
+	// orb_advert_t _mpc_outputs_pub{nullptr};
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::BAT_CRIT_THR>)     _param_bat_crit_thr,

@@ -168,6 +168,8 @@ set(msg_files
 	wind_estimate.msg
 	yaw_estimator_status.msg
 	key_command.msg
+	mpc_inputs.msg
+	mpc_outputs.msg
 )
 
 set(deprecated_msgs

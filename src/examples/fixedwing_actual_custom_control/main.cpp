@@ -432,6 +432,10 @@ void Controllers::init_ECL_variables(){
 	gamma_land=(float)(2*M_PI/180);
 	dg=250;
 	dis_t=71.50;
+	Ki_alt_lim=1;
+	_intergrator_alt_lim=0;
+	_min_alt_lim=-1;
+	_max_alt_lim=1;
 }
 
 void Controllers::initialise_NSADLC_HPF()
@@ -508,6 +512,18 @@ float Controllers::altitude_controller(const Control_Data &state_data,float h_re
 {
 	float hdot_ref=-Kp_alt*(-1*state_data.posz-h_ref)+state_data.hdot_bar_ref; //!!!Check posz positive direction!!!
 	return hdot_ref;
+}
+
+float Controllers::altitude_limit_intergrator(const Control_Data &state_data,float h_ref,const float dt)
+{
+	//Anti-windup
+	float Ti=1,Ta=1;
+	float herr=(-1*state_data.posz-h_ref);
+	float herr_ant_wind=1/Ti*herr+1/Ta*(hdot_ref_int_lim-hdot_ref_int);
+	_intergrator_alt_lim=_intergrator_alt_lim+herr_ant_wind*dt;
+	hdot_ref_int=Ki_alt_lim*_intergrator_alt_lim; //!!!Check posz positive direction!!!
+	hdot_ref_int_lim=math::constrain(hdot_ref_int,_min_alt_lim,_max_alt_lim);
+	return hdot_ref_int_lim;
 }
 
 float Controllers::LSA(const Control_Data &state_data,float Bw_ref,const float dt)
@@ -827,6 +843,24 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4]){
 	}
 }
 
+void Controllers::mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]){
+	for(int i=0;i<MPC_P*MPC_num_inputs;i++){
+		if(state>=2){
+			if(i<MPC_P){
+				mpc_ref[i]=h_ref+(i-1)*tan(-gamma)*MPC_Ts;
+			}else{
+				mpc_ref[i]=v_ref;
+			}
+		}else{
+			if(i<MPC_P){
+				mpc_ref[i]=h_ref;
+			}else{
+				mpc_ref[i]=v_ref;
+			}
+		}
+	}
+}
+
 void Controllers::vehicle_control_mode_poll()
 {
 	_vcontrol_mode_sub.update(&_vcontrol_mode);
@@ -886,7 +920,7 @@ void Controllers::Run()
 
 	vehicle_control_mode_poll();
 
-	if(_vcontrol_mode.flag_control_position_enabled){ //FIX CONTROL MODE
+	if(_vcontrol_mode.flag_control_position_enabled || _vcontrol_mode.flag_control_offboard_enabled){ //FIX CONTROL MODE
 
 	airspeed_validated_s airspeed;
 	// airspeed_s airspeed;
@@ -932,6 +966,15 @@ void Controllers::Run()
 
 		// airspeed_s airspeed;
 		// airspeed_sub.copy(&airspeed);
+
+		/*get local copy of mpc out states*/
+		mpc_outputs_s mpc_out{};
+		mpc_out_sub.copy(&mpc_out);
+
+		// TESTING
+		// if(disp_count%10==0){
+		// 	std::cout<<"MPC_mv_0 : "<<mpc_out.mpc_mv_out[0]<<" MPC_mv_1 : "<<mpc_out.mpc_mv_out[1]<<"\n";
+		// }
 
 
 		/*get alpha and beta*/
@@ -1015,11 +1058,33 @@ void Controllers::Run()
 					manual_mode=false;
 
 					//Longitudanal Controllers
-					//Altitude controller
 					float href=SM_ref[0];//altitude (Make a way to trigger )
-					hdot_ref=altitude_controller(control_input,href,dt);
-					hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max);
 					float vbar_ref=SM_ref[1];
+
+					//MPC referance generator!!!
+					mpc_referance_generator(href,vbar_ref,mpc_ref_in);
+					mpc_h=-control_input.posz;
+					mpc_vbar=control_input.airspeed-vbar_trim;
+					//MPC activator
+					if(state>=1 && _vcontrol_mode.flag_control_offboard_enabled){
+						//MPC controller
+						std::cout<<"Activate MPC"<<"\n";
+						//Limit intergrator calculation
+						float Lim_Int=altitude_limit_intergrator(control_input,href,dt);
+						//MPC inputs
+
+						//MPC outputs
+						hdot_ref=mpc_out.mpc_mv_out[0]-Lim_Int;
+						dT=mpc_out.mpc_mv_out[1];
+
+					}else{
+						//Altitude controller
+						hdot_ref=altitude_controller(control_input,href,dt);
+						//Airspeed controller
+						dT=airspeed_controller(control_input,vbar_ref,dt);
+					}
+
+					hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max);
 					//Climbrate controller
 					float Cw_ref;
 					Cw_ref=climb_rate_controller(control_input,hdot_ref,dt);
@@ -1029,8 +1094,6 @@ void Controllers::Run()
 					NSADLC_controller(control_input,Cw_ref,dt,&defl[0]);
 					dE=defl[0];
 					dF=defl[1];
-					//Airspeed controller
-					dT=airspeed_controller(control_input,vbar_ref,dt);
 
 
 					//Lateral Controllers
@@ -1294,6 +1357,17 @@ void Controllers::Run()
 		/* publish rates */
 		//orb_publish(ORB_ID(vehicle_rates_setpoint), rates_pub, &rates_sp);
 		_rate_sp_pub.publish(rates_sp);
+
+		/*Publish MPC inputs*/
+		std::copy(mpc_ref_in,mpc_ref_in+38,mpc_ins.mpc_ref_in);
+		mpc_ins.mpc_mo_in[0]=mpc_h;
+		mpc_ins.mpc_mo_in[1]=mpc_vbar;
+
+		// TESTING
+		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_ref_in[0]<<" ; "<<mpc_ins.mpc_ref_in[37]<<"\n";
+		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_mo_in[0]<<" ; "<<mpc_ins.mpc_mo_in[1]<<"\n";
+
+		mpc_in_pub.publish(mpc_ins);
 
 		/* sanity check and publish actuator outputs */
 		if (PX4_ISFINITE(actuators.control[0]) &&

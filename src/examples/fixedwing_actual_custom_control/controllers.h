@@ -88,6 +88,9 @@
 #include "BlockHighPass.cpp"
 #include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_control_mode.h>
+#include <uORB/topics/mpc_inputs.h>
+#include <uORB/topics/mpc_outputs.h>
+
 //Graph plotting
 #include <iostream>
 #include <fstream>
@@ -150,6 +153,8 @@ public:
 	void vehicle_control_mode_poll();
 	void initialise_integrators(const Control_Data &state_data);
 	void state_machine(Control_Data &state_data,float ref_out[4]);
+	float altitude_limit_intergrator(const Control_Data &state_data,float h_ref,const float dt);
+	void mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]);
 
 private:
 	void Run() override;
@@ -174,16 +179,21 @@ private:
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed_validated)};
 	//uORB::SubscriptionData<airspeed_validated_s> _airspeed_validated_sub{ORB_ID(airspeed_validated)};
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed)};
+	uORB::Subscription mpc_out_sub{ORB_ID(mpc_outputs)};
+
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
 	//uORB::Subscription _att_sp_sub{ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Publication<vehicle_rates_setpoint_s>	_rate_sp_pub{ORB_ID(vehicle_rates_setpoint)};
+	uORB::Publication<mpc_inputs_s>	mpc_in_pub{ORB_ID(mpc_inputs)};
 
 	actuator_controls_s			actuators {};
 	vehicle_rates_setpoint_s		rates_sp {};
 	vehicle_local_position_s	_local_pos {};
 	vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
+	mpc_inputs_s				mpc_ins{};
+
 
 	perf_counter_t	_loop_perf;
 
@@ -196,6 +206,7 @@ private:
 	int manual_count=0;
 	//Anti-windup
 	float dT_AS=0,dT_AS_lim=0,dR_LSA=0,dR_LSA_lim=0,dA_RR=0,dA_RR_lim=0,dF_DLC=0,dF_DLC_lim=0,dE_NSA=0,dE_NSA_lim=0;
+	float hdot_ref_int=0,hdot_ref_int_lim=0;
 	//State Machine
 	bool waypoint_END=false,END=false,Land=false,Abort=false,Anti_Abort=false,yaw_ctrl=false,Log_data=false;
 	float Tau_yaw=0,gamma=0,gamma_land=0,h_ref_SM=0,dg=0,dis_t=0;
@@ -204,6 +215,13 @@ private:
 	ofstream myfile;
 	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log;
 	std::vector<int> state_log;
+	// MPC
+	int MPC_P=19;//choose
+	float MPC_Ts=0.04;//choose
+	float MPC_num_inputs=2;
+	float mpc_ref_in[38];
+	float mpc_h=0;
+	float mpc_vbar=0;
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::FW_MAN_P_MAX>) _param_fw_man_p_max,
