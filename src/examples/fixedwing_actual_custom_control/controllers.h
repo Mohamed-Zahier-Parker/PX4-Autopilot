@@ -222,6 +222,7 @@ private:
 	float mpc_ref_in[38];
 	float mpc_h=0;
 	float mpc_vbar=0;
+	bool mpc_activate=false;
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::FW_MAN_P_MAX>) _param_fw_man_p_max,

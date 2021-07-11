@@ -1068,10 +1068,13 @@ void Controllers::Run()
 					//MPC activator
 					if(state>=1 && _vcontrol_mode.flag_control_offboard_enabled){
 						//MPC controller
-						std::cout<<"Activate MPC"<<"\n";
+						if(!mpc_activate){
+							std::cout<<"Activate MPC"<<"\n";
+							mpc_activate=true;
+						}
 						//Limit intergrator calculation
 						float Lim_Int=altitude_limit_intergrator(control_input,href,dt);
-						//MPC inputs
+						//MPC inputs(Check if you can publish here then wait for outputs before continuing)
 
 						//MPC outputs
 						hdot_ref=mpc_out.mpc_mv_out[0]-Lim_Int;
@@ -1082,6 +1085,7 @@ void Controllers::Run()
 						hdot_ref=altitude_controller(control_input,href,dt);
 						//Airspeed controller
 						dT=airspeed_controller(control_input,vbar_ref,dt);
+						mpc_activate=false;
 					}
 
 					hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max);
@@ -1296,6 +1300,17 @@ void Controllers::Run()
 				// printf("dA : %.5f ; dE : %.5f ; dR : %.5f ; dT : %.5f\n",(double)dA,(double)dE,(double)dR,(double)dT);
 				// printf("\n");
 
+				/*Publish MPC inputs*/
+		std::copy(mpc_ref_in,mpc_ref_in+38,mpc_ins.mpc_ref_in);
+		mpc_ins.mpc_mo_in[0]=mpc_h;
+		mpc_ins.mpc_mo_in[1]=mpc_vbar;
+
+		// TESTING
+		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_ref_in[0]<<" ; "<<mpc_ins.mpc_ref_in[37]<<"\n";
+		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_mo_in[0]<<" ; "<<mpc_ins.mpc_mo_in[1]<<"\n";
+
+		mpc_in_pub.publish(mpc_ins);
+
 
 	}
 
@@ -1359,17 +1374,6 @@ void Controllers::Run()
 		/* publish rates */
 		//orb_publish(ORB_ID(vehicle_rates_setpoint), rates_pub, &rates_sp);
 		_rate_sp_pub.publish(rates_sp);
-
-		/*Publish MPC inputs*/
-		std::copy(mpc_ref_in,mpc_ref_in+38,mpc_ins.mpc_ref_in);
-		mpc_ins.mpc_mo_in[0]=mpc_h;
-		mpc_ins.mpc_mo_in[1]=mpc_vbar;
-
-		// TESTING
-		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_ref_in[0]<<" ; "<<mpc_ins.mpc_ref_in[37]<<"\n";
-		// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_mo_in[0]<<" ; "<<mpc_ins.mpc_mo_in[1]<<"\n";
-
-		mpc_in_pub.publish(mpc_ins);
 
 
 		/* sanity check and publish actuator outputs */
