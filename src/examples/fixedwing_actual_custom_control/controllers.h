@@ -88,6 +88,8 @@
 #include "BlockHighPass.cpp"
 #include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_control_mode.h>
+#include <uORB/topics/moving_platform.h>
+#include <uORB/topics/fw_controllers_sm.h>
 //Graph plotting
 #include <iostream>
 #include <fstream>
@@ -150,6 +152,7 @@ public:
 	void vehicle_control_mode_poll();
 	void initialise_integrators(const Control_Data &state_data);
 	void state_machine(Control_Data &state_data,float ref_out[4]);
+	void landing_point(Control_Data &state_data,float mp_pose[3],float mp_vel[3]);
 
 private:
 	void Run() override;
@@ -174,16 +177,19 @@ private:
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed_validated)};
 	//uORB::SubscriptionData<airspeed_validated_s> _airspeed_validated_sub{ORB_ID(airspeed_validated)};
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed)};
+	uORB::Subscription _mov_plat_sub{ORB_ID(moving_platform)};
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
 	//uORB::Subscription _att_sp_sub{ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Publication<vehicle_rates_setpoint_s>	_rate_sp_pub{ORB_ID(vehicle_rates_setpoint)};
+	uORB::Publication<fw_controllers_sm_s>	_sm_state_pub{ORB_ID(fw_controllers_sm)};
 
 	actuator_controls_s			actuators {};
 	vehicle_rates_setpoint_s		rates_sp {};
 	vehicle_local_position_s	_local_pos {};
 	vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
+	fw_controllers_sm_s			sm_state{};
 
 	perf_counter_t	_loop_perf;
 
@@ -202,8 +208,12 @@ private:
 	int state=0;
 	//Graph Plotting
 	ofstream myfile;
-	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log;
+	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log,h_ref_log;
 	std::vector<int> state_log;
+
+	// Moving platform
+	std::vector<float> TD_position={0.00,0.00,0.00};//Touch Down point
+
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::FW_MAN_P_MAX>) _param_fw_man_p_max,

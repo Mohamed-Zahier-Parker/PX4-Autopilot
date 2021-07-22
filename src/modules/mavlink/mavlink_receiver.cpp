@@ -65,6 +65,9 @@
 #include "mavlink_main.h"
 #include "mavlink_receiver.h"
 
+#include <algorithm>
+#include <iostream>
+
 #ifdef CONFIG_NET
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 1360
 #else
@@ -270,6 +273,10 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 	case MAVLINK_MSG_ID_STATUSTEXT:
 		handle_message_statustext(msg);
 		break;
+
+	// case MAVLINK_MSG_ID_MP_SPECS:
+	// 	handle_message_moving_platform(msg);
+	// 	break;
 
 	default:
 		break;
@@ -2782,6 +2789,24 @@ void MavlinkReceiver::handle_message_statustext(mavlink_message_t *msg)
 		_log_message_pub.publish(log_message);
 	}
 }
+
+// void MavlinkReceiver::handle_message_moving_platform(mavlink_message_t *msg){
+
+// 	mavlink_mp_specs_t mp_receive;
+// 	mavlink_msg_mp_specs_decode(msg, &mp_receive);
+
+// 	moving_platform_s mp_specs {};
+
+// 	mp_specs.mp_pose[0]=mp_receive.mp_position[0];
+// 	mp_specs.mp_pose[1]=mp_receive.mp_position[1];
+// 	mp_specs.mp_pose[2]=mp_receive.mp_position[2];
+// 	mp_specs.mp_vel[0]=mp_receive.mp_velocity[0];
+// 	mp_specs.mp_vel[1]=mp_receive.mp_velocity[1];
+// 	mp_specs.mp_vel[2]=mp_receive.mp_velocity[2];
+// 	mp_specs.timestamp= hrt_absolute_time();
+
+// 	_moving_platform_pub.publish(mp_specs);
+// }
 
 /**
  * Receive data from UART/UDP

@@ -725,6 +725,7 @@ Mavlink::set_hil_enabled(bool hil_enabled)
 	if (hil_enabled && !_hil_enabled && _datarate > 5000) {
 		_hil_enabled = true;
 		ret = configure_stream("HIL_ACTUATOR_CONTROLS", 200.0f);
+		// configure_stream("SM_STATE", 200.0f); // Used to send data to gazebo via mavlink :Check if valid
 
 		if (_param_sys_hitl.get() == 2) {		// Simulation in Hardware enabled ?
 			configure_stream("GROUND_TRUTH", 25.0f); 	// HIL_STATE_QUATERNION to display the SIH
@@ -738,6 +739,7 @@ Mavlink::set_hil_enabled(bool hil_enabled)
 	if (!hil_enabled && _hil_enabled) {
 		_hil_enabled = false;
 		ret = configure_stream("HIL_ACTUATOR_CONTROLS", 0.0f);
+		// configure_stream("SM_STATE", 0.0f); // Used to send data to gazebo via mavlink :Check if valid
 
 		configure_stream("GROUND_TRUTH", 0.0f);
 	}

@@ -118,6 +118,7 @@
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
 #include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/wind_estimate.h>
+// #include <uORB/topics/fw_controllers_sm.h>
 
 using matrix::Vector3f;
 using matrix::wrap_2pi;
@@ -5243,6 +5244,68 @@ protected:
 	}
 };
 
+// class MavlinkStreamSMState : public MavlinkStream
+// {
+// public:
+// 	const char *get_name() const override
+// 	{
+// 		return MavlinkStreamSMState::get_name_static();
+// 	}
+
+// 	static constexpr const char *get_name_static()
+// 	{
+// 		return "SM_STATE";
+// 	}
+
+// 	static constexpr uint16_t get_id_static()
+// 	{
+// 		return MAVLINK_MSG_ID_SM_STATE;
+// 	}
+
+// 	uint16_t get_id() override
+// 	{
+// 		return get_id_static();
+// 	}
+
+// 	static MavlinkStream *new_instance(Mavlink *mavlink)
+// 	{
+// 		return new MavlinkStreamSMState(mavlink);
+// 	}
+
+// 	unsigned get_size() override
+// 	{
+// 		return _fw_controllers_sm_sub.advertised() ? MAVLINK_MSG_ID_SM_STATE_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
+// 	}
+
+// private:
+// 	uORB::Subscription _fw_controllers_sm_sub{ORB_ID(fw_controllers_sm)};
+
+// 	/* do not allow top copying this class */
+// 	MavlinkStreamSMState(MavlinkStreamSMState &) = delete;
+// 	MavlinkStreamSMState &operator = (const MavlinkStreamSMState &) = delete;
+
+// protected:
+// 	explicit MavlinkStreamSMState(Mavlink *mavlink) : MavlinkStream(mavlink)
+// 	{}
+
+// 	bool send(const hrt_abstime t) override
+// 	{
+// 		fw_controllers_sm_s fw_sm_state;
+
+// 		if (_fw_controllers_sm_sub.update(&fw_sm_state)) {
+// 			mavlink_sm_state_t msg{};
+// 			msg.time_usec = hrt_absolute_time();
+// 			msg.state=fw_sm_state.state;
+
+// 			mavlink_msg_sm_state_send_struct(_mavlink->get_channel(), &msg);
+
+// 			return true;
+// 		}
+
+// 		return false;
+// 	}
+// };
+
 static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamHeartbeat>(),
 	create_stream_list_item<MavlinkStreamStatustext>(),
@@ -5307,7 +5370,9 @@ static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamProtocolVersion>(),
 	create_stream_list_item<MavlinkStreamFlightInformation>(),
 	create_stream_list_item<MavlinkStreamStorageInformation>(),
-	create_stream_list_item<MavlinkStreamRawRpm>()
+	create_stream_list_item<MavlinkStreamRawRpm>(),
+	// create_stream_list_item<MavlinkStreamSMState>() //Custom controllers state machine state
+
 };
 
 const char *get_stream_name(const uint16_t msg_id)
