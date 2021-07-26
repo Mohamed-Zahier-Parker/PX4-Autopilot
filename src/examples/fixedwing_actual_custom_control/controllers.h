@@ -151,7 +151,7 @@ public:
 	void reset_integrators();
 	void vehicle_control_mode_poll();
 	void initialise_integrators(const Control_Data &state_data);
-	void state_machine(Control_Data &state_data,float ref_out[4]);
+	void state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3]);
 	void landing_point(Control_Data &state_data,float mp_pose[3],float mp_vel[3]);
 
 private:
@@ -208,7 +208,7 @@ private:
 	int state=0;
 	//Graph Plotting
 	ofstream myfile;
-	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log,h_ref_log;
+	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log,h_ref_log,publish_time_log;
 	std::vector<int> state_log;
 
 	// Moving platform

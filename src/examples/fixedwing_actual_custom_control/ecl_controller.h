@@ -192,4 +192,5 @@ protected:
 	float _min_deflection;
 	float _max_deflection;
 	float L_track=0;
+	float psi_ref_out=0;
 };

@@ -708,7 +708,7 @@ void Controllers::initialise_integrators(const Control_Data &state_data)
 
 }
 
-void Controllers::state_machine(Control_Data &state_data,float ref_out[4]){
+void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3]){
 	float V_ground=sqrt(pow(state_data.velx_I,2)+pow(state_data.vely_I,2)+pow(state_data.velz_I,2));
 	//flare calculation
 	float dd=V_ground*Tau_yaw;  //distance of state changes
@@ -777,8 +777,12 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4]){
 				std::cout<<"state 6\n";
 				Log_data=true;
 				// Display if hit target or not and miss distance
-				std::cout<<"Miss Distance : "<<(L_track-_x_guide)<<"\n";
-				if(abs(L_track-_x_guide)<=(float)1.5){ //Depends on size of platform(for now it is 3m long therefore +-1.5m is range)
+				float fw_pos_land=sqrt(pow(state_data.posx,2.0)+pow(state_data.posy,2.0));
+				float mp_pos_land=sqrt(pow(mp_pos[0],2.0)+pow(mp_pos[1],2.0));
+				std::cout<<"Miss Distance : "<<(mp_pos_land-fw_pos_land)<<"\n";
+				std::cout<<"fw_x : "<<state_data.posx<<" fw_y : "<<state_data.posy<<" fw_z : "<<state_data.posz<<"\n";
+				std::cout<<"mp_x : "<<mp_pos[0]<<" mp_y : "<<mp_pos[1]<<" mp_z : "<<mp_pos[2]<<"\n";
+				if(abs(mp_pos_land-fw_pos_land)<=(float)1.5){ //Depends on size of platform(for now it is 3m long therefore +-1.5m is range)
 					std::cout<<"Platform Hit\n";
 				}else{
 					std::cout<<"Ground Hit\n";
@@ -846,9 +850,15 @@ void Controllers::landing_point(Control_Data &state_data,float mp_pose[3],float 
 		float land_time=d_ap/(FW_UAV_vel_I-MP_vel_I);
 		float MP_psi=atan2(mp_vel[1],mp_vel[0]); //moving platform heading
 		float da=FW_UAV_vel_I*land_time;
-		TD_position[0]=(state_data.posx+da*cos(MP_psi));
-		TD_position[1]=(state_data.posy+da*sin(MP_psi));
-		TD_position[2]=	mp_pose[2];
+		if(MP_vel_I>(float)1){ //Removes the ambiguity when the platform is stationary
+			TD_position[0]=(state_data.posx+da*cos(MP_psi));
+			TD_position[1]=(state_data.posy+da*sin(MP_psi));
+			TD_position[2]=	mp_pose[2];
+		}else{
+			TD_position[0]=mp_pose[0];
+			TD_position[1]=mp_pose[1];
+			TD_position[2]=mp_pose[2];
+		}
 	}else{
 		TD_position[0]=mp_pose[0];
 		TD_position[1]=mp_pose[1];
@@ -1005,7 +1015,6 @@ void Controllers::Run()
 		// printf("Controllers Psi :    %f\n",(double)control_input.psi*180/M_PI);
 		// printf("\n");
 
-
 				if (global_sp_updated) {
 					// struct position_setpoint_triplet_s triplet;
 					// orb_copy(ORB_ID(position_setpoint_triplet), global_sp_sub, &triplet);
@@ -1022,7 +1031,10 @@ void Controllers::Run()
 
 				/*Run State Machine*/
 				float SM_ref[4];
-				state_machine(control_input,SM_ref);
+				state_machine(control_input,SM_ref,moving_platform.mp_pose);
+
+				// Publish time
+				float publish_time = hrt_absolute_time()*1e-6f;
 
 				/*Run Landing point algorithm*/
 				landing_point(control_input,moving_platform.mp_pose,moving_platform.mp_vel);
@@ -1032,7 +1044,7 @@ void Controllers::Run()
 
 
 				/*Run Controllers*/
-				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,psi_ref=0,guide_val[4],href=0;
+				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0;
 				if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
 				//if(1){
 					if(!controllers_activate){
@@ -1081,8 +1093,8 @@ void Controllers::Run()
 					//Navigation controller
 					navigation_controller(destinations,destination_size,control_input,guide_val);
 					//Guidance and Heading controllers
-					psi_ref=guidance_controller_2(guide_val);
-					float phi_ref_HG=heading_controller(control_input,psi_ref);
+					psi_ref_out=guidance_controller_2(guide_val);
+					float phi_ref_HG=heading_controller(control_input,psi_ref_out);
 					//Cross-Track controller
 					float y_ref=SM_ref[2];
 					float phibar_ref=0;
@@ -1203,6 +1215,7 @@ void Controllers::Run()
 					hdot_bar_ref_log.push_back(control_input.hdot_bar_ref);
 					airspeed_log.push_back(control_input.airspeed);
 					h_ref_log.push_back(href);
+					publish_time_log.push_back(publish_time);
 				}
 
 				if(Log_data==true){
@@ -1244,9 +1257,13 @@ void Controllers::Run()
 					for(int i=0;i<sizehdot;i++){
 						myfile<<h_ref_log[i]<<",";
 					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<publish_time_log[i]<<",";
+					}
 					myfile.close();
 					Log_data=false;
-					x_log.clear();hdot_log.clear();hdot_bar_ref_log.clear();airspeed_log.clear();h_ref_log.clear();
+					x_log.clear();hdot_log.clear();hdot_bar_ref_log.clear();airspeed_log.clear();h_ref_log.clear();publish_time_log.clear();
 				}
 
 
