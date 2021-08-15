@@ -278,6 +278,10 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 	// 	handle_message_moving_platform(msg);
 	// 	break;
 
+	case MAVLINK_MSG_ID_MPC_OUTPUTS:
+        	handle_message_mpc_outputs(msg);
+        	break;
+
 	default:
 		break;
 	}
@@ -2807,6 +2811,28 @@ void MavlinkReceiver::handle_message_statustext(mavlink_message_t *msg)
 
 // 	_moving_platform_pub.publish(mp_specs);
 // }
+
+void
+MavlinkReceiver::handle_message_mpc_outputs(mavlink_message_t *msg)
+{
+    mavlink_mpc_outputs_t man;
+    mavlink_msg_mpc_outputs_decode(msg, &man);
+
+struct mpc_outputs_s outputs = {};
+
+    outputs.timestamp = hrt_absolute_time();
+    std::copy(man.mpc_mv_out,man.mpc_mv_out+2,outputs.mpc_mv_out);
+//     outputs.mpc_mv_out[0]=2.0;outputs.mpc_mv_out[1]=2.0;
+    _mpc_outputs_pub.publish(outputs);
+//     if (_mpc_outputs_pub == nullptr) {
+//         _mpc_outputs_pub = orb_advertise(ORB_ID(mpc_outputs), &outputs);
+
+//     } else {
+        // orb_publish(ORB_ID(mpc_outputs), _mpc_outputs_pub, &outputs);
+//     }
+
+	// std::cout<<"MPC_out Time : "<<outputs.timestamp<<"\n";
+}
 
 /**
  * Receive data from UART/UDP

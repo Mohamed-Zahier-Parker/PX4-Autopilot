@@ -103,6 +103,7 @@
 #include <uORB/topics/vehicle_trajectory_bezier.h>
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
 // #include <uORB/topics/moving_platform.h>
+#include <uORB/topics/mpc_outputs.h>
 #include <algorithm>
 #include <iostream>
 
@@ -183,6 +184,7 @@ private:
 	void handle_message_vision_position_estimate(mavlink_message_t *msg);
 	void handle_message_onboard_computer_status(mavlink_message_t *msg);
 	// void handle_message_moving_platform(mavlink_message_t *msg);
+	void handle_message_mpc_outputs(mavlink_message_t *msg);
 
 
 	void Run();
@@ -266,6 +268,7 @@ private:
 	uORB::Publication<vehicle_trajectory_waypoint_s>	_trajectory_waypoint_pub{ORB_ID(vehicle_trajectory_waypoint)};
 
 	// uORB::Publication<moving_platform_s>			_moving_platform_pub{ORB_ID(moving_platform)};
+	uORB::Publication<mpc_outputs_s>			_mpc_outputs_pub{ORB_ID(mpc_outputs)};
 
 
 	// ORB publications (multi)

@@ -169,6 +169,8 @@ set(msg_files
 	yaw_estimator_status.msg
 	moving_platform.msg
 	fw_controllers_sm.msg
+	mpc_inputs.msg
+	mpc_outputs.msg
 )
 
 set(deprecated_msgs

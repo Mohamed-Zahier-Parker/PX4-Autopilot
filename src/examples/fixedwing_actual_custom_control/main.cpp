@@ -401,8 +401,8 @@ void Controllers::init_ECL_variables(){
 	Kc=0.0032;
 	Kq=-0.0876;
 	Km=0.1213;
-	Ki_CR=1.0130;
-	Kp_CR=2.4960;
+	Ki_CR=1.0130;//Original CR gain
+	Kp_CR=2.4960;//Original CR gain
 	Kp_alt=0.7500;
 	Ki_LSA=-0.2623;
 	K_r=-0.3114;
@@ -430,8 +430,15 @@ void Controllers::init_ECL_variables(){
 	Tau_yaw=4;
 	gamma=(float)(4*M_PI/180);
 	gamma_land=(float)(2*M_PI/180);
-	dg=250;
-	dis_t=75;
+	// dg=250;
+	// dis_t=75;
+	dg=500;
+	dis_t=100.0;
+	Ki_alt_lim=0.5;
+	_intergrator_alt_lim=0;
+	_min_alt_lim=-2;
+	_max_alt_lim=2;
+	FW_UAV_ideal_vel_I_land=18.0;
 }
 
 void Controllers::initialise_NSADLC_HPF()
@@ -510,6 +517,18 @@ float Controllers::altitude_controller(const Control_Data &state_data,float h_re
 	return hdot_ref;
 }
 
+float Controllers::altitude_limit_intergrator(const Control_Data &state_data,float h_ref,const float dt)
+{
+	//Anti-windup
+	float Ti=1,Ta=1;
+	float herr=(-1*state_data.posz-h_ref);
+	float herr_ant_wind=1/Ti*herr+1/Ta*(hdot_ref_int_lim-hdot_ref_int);
+	_intergrator_alt_lim=_intergrator_alt_lim+herr_ant_wind*dt;
+	hdot_ref_int=Ki_alt_lim*_intergrator_alt_lim; //!!!Check posz positive direction!!!
+	hdot_ref_int_lim=math::constrain(hdot_ref_int,_min_alt_lim,_max_alt_lim);
+	return hdot_ref_int_lim;
+}
+
 float Controllers::LSA(const Control_Data &state_data,float Bw_ref,const float dt)
 {
 	float edot_b=state_data.Bw-Bw_ref;
@@ -582,25 +601,41 @@ void Controllers::guide_axis_alg(float S[2],float D[2],const Control_Data &state
 {
 	//track angle
 	float psi_track=atan2((D[0]-S[0]),(D[1]-S[1]));
+
 	//x and 	y calculation
 	//conversion from inertial axis to track axis via matrix multiplication
-	float res[10][10],m1[10][10],m2[10][10];//result,matrix1,matrix2
-	int r1=2,c1=2,r2=2,c2=1;//row and column of matrix 1, row and column of matrix 2
-	m1[0][0]=cos(psi_track);m1[0][1]=sin(psi_track);m1[1][0]=-sin(psi_track);m1[1][1]=cos(psi_track);m2[0][0]=(state_data.posx-S[1]);m2[1][0]=(state_data.posy-S[0]);
-	matrix_mult(m1, m2,res,r1,c1,r2,c2);
-	out[0]=res[0][0];out[1]=res[1][0];out[2]=psi_track;
+	// float res[10][10],m1[10][10],m2[10][10];//result,matrix1,matrix2
+	// int r1=2,c1=2,r2=2,c2=1;//row and column of matrix 1, row and column of matrix 2
+	// m1[0][0]=cos(psi_track);m1[0][1]=sin(psi_track);m1[1][0]=-sin(psi_track);m1[1][1]=cos(psi_track);m2[0][0]=(state_data.posx-S[1]);m2[1][0]=(state_data.posy-S[0]);
+	// matrix_mult(m1, m2,res,r1,c1,r2,c2);
+	// out[0]=res[0][0];out[1]=res[1][0];out[2]=psi_track;
+
+	//Alternative to guidance calculation
+	matrix::Matrix<float,2,2> Guide_DCM;
+	Guide_DCM(0,0)=cos(psi_track);Guide_DCM(0,1)=sin(psi_track);Guide_DCM(1,0)=-sin(psi_track);Guide_DCM(1,1)=cos(psi_track);
+	matrix::Matrix<float,2,1> Guide_in_pose;
+	Guide_in_pose(0,0)=(state_data.posx-S[1]);Guide_in_pose(1,0)=(state_data.posy-S[0]);
+	matrix::Matrix<float,2,1> Guide_out_pose = Guide_DCM.operator*(Guide_in_pose);
+	out[0]=Guide_out_pose(0,0);out[1]=Guide_out_pose(1,0);out[2]=psi_track;
+
 	//ydot calculation
-	for(int i=0;i<10;i++){
-		for(int j=0;j<10;j++){
-			res[i][j]=0;
-			m1[i][j]=0;
-			m2[i][j]=0;
-		}
-	}
-	r1=2,c1=2,r2=2,c2=1;//row and column of matrix 1, row and column of matrix 2
-	m1[0][0]=cos(psi_track);m1[0][1]=sin(psi_track);m1[1][0]=-sin(psi_track);m1[1][1]=cos(psi_track);m2[0][0]=(state_data.velx_I);m2[1][0]=(state_data.vely_I);
-	matrix_mult(m1,m2,res,r1,c1,r2,c2);
-	out[3]=res[1][0];
+	// for(int i=0;i<10;i++){
+	// 	for(int j=0;j<10;j++){
+	// 		res[i][j]=0;
+	// 		m1[i][j]=0;
+	// 		m2[i][j]=0;
+	// 	}
+	// }
+	// r1=2,c1=2,r2=2,c2=1;//row and column of matrix 1, row and column of matrix 2
+	// m1[0][0]=cos(psi_track);m1[0][1]=sin(psi_track);m1[1][0]=-sin(psi_track);m1[1][1]=cos(psi_track);m2[0][0]=(state_data.velx_I);m2[1][0]=(state_data.vely_I);
+	// matrix_mult(m1,m2,res,r1,c1,r2,c2);
+	// out[3]=res[1][0];
+
+	//Alternative to guidance ydot calculation
+	matrix::Matrix<float,2,1> Guide_in_vel;
+	Guide_in_vel(0,0)=(state_data.velx_I);Guide_in_vel(1,0)=(state_data.vely_I);
+	matrix::Matrix<float,2,1> Guide_out_vel = Guide_DCM.operator*(Guide_in_vel);
+	out[3]=Guide_out_vel(1,0);
 }
 
 void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_size,const Control_Data &state_data,float out[2][2]) //!!!COMPLETE!!!
@@ -645,6 +680,7 @@ void Controllers::navigation_controller(float D[][2],int Destination_size,const 
 	waypoint_scheduler(D,Destination_size,state_data,points);
 	guide_axis_alg(points[0],points[1],state_data,guide_val);
 	_x_guide=guide_val[0];//update x in memory block
+
 	for(int i=0;i<4;i++){
 		out[i]=guide_val[i];
 	}
@@ -686,6 +722,7 @@ void Controllers::reset_integrators()
 	_intergrator_LSA=0;
 	_intergrator_RR=0;
 	_intergrator_yaw=0;
+	_intergrator_alt_lim=0;
 }
 
 void Controllers::initialise_integrators(const Control_Data &state_data)
@@ -705,6 +742,7 @@ void Controllers::initialise_integrators(const Control_Data &state_data)
 	//Assume p_ref=0
 	p_ref=0;//Testing
 	_intergrator_RR=1/Ki_RR*(-Kp_RR*(state_data.p-p_ref)-dA_pub);// !!!Check if p_ref=0 is a valid assumption!!!
+	_intergrator_alt_lim=0;
 
 }
 
@@ -748,7 +786,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				std::cout<<"phi : "<<state_data.phi*(float)(180/M_PI)<<"\n";
 				std::cout<<"y : "<<state_data.y<<"\n";
 				std::cout<<"herr : "<<abs((float)h_ref_SM-(-(float)state_data.posz))<<"\n";
-                		if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && -state_data.h_dot<(float)1.40 && abs(state_data.beta)<(float)(5.0/180*M_PI) && state_data.theta<(float)(6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
+                		if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && state_data.h_dot>(float)-1.40 && abs(state_data.beta)<(float)(5.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
                     			state=3;//Pre-landing
 					std::cout<<"state 3\n";
 				}else{
@@ -770,7 +808,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				std::cout<<"state 5\n";
             		}
 	    	}
-        	if(-state_data.posz<(float)0.25 && state_data.Cw<-(float)18){//change in PX4 code to acceleration change
+        	if(-state_data.posz<(float)0.5 && state_data.Cw<-(float)15){//change in PX4 code to acceleration change
 			if(state==5 || state!=6){
             			state=6;//Landed
             			END=true;
@@ -779,7 +817,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				// Display if hit target or not and miss distance
 				float fw_pos_land=sqrt(pow(state_data.posx,2.0)+pow(state_data.posy,2.0));
 				float mp_pos_land=sqrt(pow(mp_pos[0],2.0)+pow(mp_pos[1],2.0));
-				std::cout<<"Miss Distance : "<<(mp_pos_land-fw_pos_land)<<"\n";
+				std::cout<<"Miss Distance : "<<(fw_pos_land-mp_pos_land)<<"\n";
 				std::cout<<"fw_x : "<<state_data.posx<<" fw_y : "<<state_data.posy<<" fw_z : "<<state_data.posz<<"\n";
 				std::cout<<"mp_x : "<<mp_pos[0]<<" mp_y : "<<mp_pos[1]<<" mp_z : "<<mp_pos[2]<<"\n";
 				if(abs(mp_pos_land-fw_pos_land)<=(float)1.5){ //Depends on size of platform(for now it is 3m long therefore +-1.5m is range)
@@ -787,6 +825,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				}else{
 					std::cout<<"Ground Hit\n";
 				}
+				std::cout<<"TD_X : "<<TD_position[0]<<" TD_Y : "<<TD_position[1]<<" TD_Z : "<<TD_position[2]<<"\n";//Touch Down point
 			}
         	}
 	}else{
@@ -795,12 +834,12 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 	}
     	switch(state){
         	case 0 : // Waypoint state
-            		ref_out[0]=17.5;ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(float)34.96+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;//conventional flying
 	    		//ref_out order: h_ref, vbar_ref, y_ref, yaw_ref
 			break;
         	case 1 : //Final Approach
-            		ref_out[0]=17.5;ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(float)34.96+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 2 : //Glideslope Tracking
@@ -822,13 +861,15 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 			yaw_ctrl=true;
 			break;
         	case 6 : //Landed
-            		ref_out[0]=0;ref_out[1]=-vbar_trim;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=0+(-TD_position[3]);ref_out[1]=-vbar_trim;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
 	    }
 
 //      if(state==3){ //Testing Abort
-//          Abort=true;
+//         Abort=true;
+// 	Log_data=true;
+// 	state=0;
 //      }
 
 	h_ref_SM=ref_out[0];
@@ -837,7 +878,8 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 	}else if(state>=2 && state<5){
 		state_data.hdot_bar_ref=-V_ground*sin(gamma);
 	}else{
-		state_data.hdot_bar_ref=-V_ground*sin(gamma_land);
+		//state_data.hdot_bar_ref=-V_ground*sin(gamma_land);// For flaring
+		state_data.hdot_bar_ref=-V_ground*sin(gamma);
 	}
 }
 
@@ -847,12 +889,20 @@ void Controllers::landing_point(Control_Data &state_data,float mp_pose[3],float 
 		float d_ap = sqrt(pow((mp_pose[0]-state_data.posx),2)+pow((mp_pose[1]-state_data.posy),2));
 		float FW_UAV_vel_I=sqrt(pow(state_data.velx_I,2)+pow(state_data.vely_I,2)+pow(state_data.velz_I,2));
 		float MP_vel_I=sqrt(pow(mp_vel[0],2)+pow(mp_vel[1],2)+pow(mp_vel[2],2));
-		float land_time=d_ap/(FW_UAV_vel_I-MP_vel_I);
-		float MP_psi=atan2(mp_vel[1],mp_vel[0]); //moving platform heading
-		float da=FW_UAV_vel_I*land_time;
+		float land_time=d_ap/(FW_UAV_vel_I*cos(gamma)-MP_vel_I); //Choose wether you want to apply ideal fw velocity or not
+		// float MP_psi=atan2(mp_vel[1],mp_vel[0]); //moving platform heading
+		// float da=FW_UAV_ideal_vel_I_land*cos(gamma)*land_time;
+
+		//Testing TD generation values
+		// std::cout<<"MP distance_x : "<<mp_pose[0]<<" MP distance_y : "<<mp_pose[1]<<"\n";
+		// std::cout<<"MP_psi : "<<MP_psi*(float)(180.00/M_PI)<<"\n";
+		// std::cout<<"FW UAV Vel I : "<<FW_UAV_vel_I<<"\n";
+
 		if(MP_vel_I>(float)1){ //Removes the ambiguity when the platform is stationary
-			TD_position[0]=(state_data.posx+da*cos(MP_psi));
-			TD_position[1]=(state_data.posy+da*sin(MP_psi));
+			// TD_position[0]=(state_data.posx+da*cos(MP_psi));
+			// TD_position[1]=(state_data.posy+da*sin(MP_psi));
+			TD_position[0] = mp_pose[0] + mp_vel[0] * land_time;
+			TD_position[1] = mp_pose[1] + mp_vel[1] * land_time;
 			TD_position[2]=	mp_pose[2];
 		}else{
 			TD_position[0]=mp_pose[0];
@@ -865,6 +915,28 @@ void Controllers::landing_point(Control_Data &state_data,float mp_pose[3],float 
 		TD_position[2]=mp_pose[2];
 	}
 
+}
+
+void Controllers::mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]){
+	for(int i=0;i<MPC_P;i++){
+		if(state>=2){
+			// if(i<MPC_P){
+			// 	mpc_ref[i]=h_ref+(i-1)*tan(-gamma)*MPC_Ts;
+			// }else{
+			// 	mpc_ref[i]=v_ref;
+			// }
+			mpc_ref[i*2]=h_ref+(i)*tan(-gamma)*MPC_Ts;
+			mpc_ref[i*2+1]=v_ref;
+		}else{
+			// if(i<MPC_P){
+			// 	mpc_ref[i]=h_ref;
+			// }else{
+			// 	mpc_ref[i]=v_ref;
+			// }
+			mpc_ref[i*2]=h_ref;
+			mpc_ref[i*2+1]=v_ref;
+		}
+	}
 }
 
 void Controllers::vehicle_control_mode_poll()
@@ -926,11 +998,13 @@ void Controllers::Run()
 
 	vehicle_control_mode_poll();
 
-	if(_vcontrol_mode.flag_control_position_enabled){ //FIX CONTROL MODE
+	if(_vcontrol_mode.flag_control_position_enabled || _vcontrol_mode.flag_control_offboard_enabled){ //FIX CONTROL MODE
 
-	airspeed_validated_s airspeed;
+	// airspeed_validated_s airspeed;
 	// airspeed_s airspeed;
-	if(airspeed_sub.update(&airspeed)){
+	// if(airspeed_sub.update(&airspeed)){
+	vehicle_local_position_s local_position;
+	if(_local_pos_sub.update(&local_position)){
 		// check for parameter updates
 		if (parameter_update_sub.updated()) {
 			// clear update
@@ -944,8 +1018,13 @@ void Controllers::Run()
 		bool global_sp_updated=global_sp_sub.updated();
 		//bool manual_control_setpoint_updated=manual_control_setpoint_sub.updated();
 
-		const float dt = math::constrain((airspeed.timestamp - _last_run) * 1e-6f, 0.002f, 0.4f);
-		_last_run = airspeed.timestamp;
+		// const float dt = math::constrain((airspeed.timestamp - _last_run) * 1e-6f, 0.002f, 0.4f);
+		// _last_run = airspeed.timestamp;
+
+		const float dt = math::constrain((local_position.timestamp - _last_run) * 1e-6f, 0.002f, 0.4f);
+		_last_run = local_position.timestamp;
+		// std::cout<<"local position dt : "<<dt<<"\n";
+		// std::cout<<"local position time : "<<local_position.timestamp<<"\n";
 
 		/*calculate rotation matix(DCM) and euler angles(CHECK IF CORRECT AS IT IS DIRECTLY FROM FixedwingAttitudeControl.cpp)*/
 		matrix::Dcmf R = matrix::Quatf(att.q);
@@ -967,14 +1046,23 @@ void Controllers::Run()
 
 		/*get local copy of airspeed state*/
 				// orb_copy(ORB_ID(airspeed_validated), airspeed_sub, &airspeed);
-		// airspeed_validated_s airspeed{};
-		// airspeed_sub.copy(&airspeed);
+		airspeed_validated_s airspeed{};
+		airspeed_sub.copy(&airspeed);
 
 		// airspeed_s airspeed;
 		// airspeed_sub.copy(&airspeed);
 
 		moving_platform_s moving_platform{};
 		_mov_plat_sub.copy(&moving_platform);
+
+		/*get local copy of mpc out states*/
+		mpc_outputs_s mpc_out{};
+		mpc_out_sub.copy(&mpc_out);
+
+		// TESTING
+		// if(disp_count%100==0){
+		// 	std::cout<<"MPC_mv_0 : "<<mpc_out.mpc_mv_out[0]<<" MPC_mv_1 : "<<mpc_out.mpc_mv_out[1]<<"\n";
+		// }
 
 
 		/*get alpha and beta*/
@@ -1000,20 +1088,35 @@ void Controllers::Run()
 		// control_input.airspeed=airspeed.true_airspeed_m_s;//check
 		control_input.alpha=alpha;
 		control_input.beta=beta;
-		control_input.posx=estim.states[7];
-		control_input.posy=estim.states[8];
-		control_input.posz=estim.states[9];
-		control_input.h_dot=-estim.states[6];
+		// control_input.posx=estim.states[7];
+		// control_input.posy=estim.states[8];
+		// control_input.posz=estim.states[9];
+		control_input.posx=local_position.x;
+		control_input.posy=local_position.y;
+		control_input.posz=local_position.z;
+		// control_input.h_dot=-estim.states[6];
+		control_input.h_dot=-local_position.vz;
 		control_input.Bw=accel.xyz[1];//!!!check!!!
 		control_input.Cw=accel.xyz[2];//!!!check!!!
-		control_input.velx_I=estim.states[4];
-		control_input.vely_I=estim.states[5];
-		control_input.velz_I=estim.states[6];
+		// control_input.velx_I=estim.states[4];
+		// control_input.vely_I=estim.states[5];
+		// control_input.velz_I=estim.states[6];
+		control_input.velx_I=local_position.vx;
+		control_input.vely_I=local_position.vy;
+		control_input.velz_I=local_position.vz;
+		control_input.y=y_old;
+		control_input.ydot=ydot_old;
 
 		//Test Psi(heading) intilisation
 		// printf("Controllers \n");
 		// printf("Controllers Psi :    %f\n",(double)control_input.psi*180/M_PI);
 		// printf("\n");
+
+		if(disp_count%1==0){
+			// std::cout<<"fw_px4_x : "<<control_input.posx<<" fw_px4_y : "<<control_input.posy<<" fw_px4_z : "<<-control_input.posz<<"\n";
+			// std::cout<<"Moving Platform posex : "<<moving_platform.mp_pose[0]<<" Moving Platform posey : "<<moving_platform.mp_pose[1]<<" Moving Platform posez : "<<-moving_platform.mp_pose[2]<<"\n";
+			// std::cout<<"FW_px4_X : "<<local_position.x<<"FW_px4_Y"<<local_position.y<<"\n";
+		}
 
 				if (global_sp_updated) {
 					// struct position_setpoint_triplet_s triplet;
@@ -1044,7 +1147,7 @@ void Controllers::Run()
 
 
 				/*Run Controllers*/
-				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0;
+				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0,vbar_ref=0;
 				if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
 				//if(1){
 					if(!controllers_activate){
@@ -1065,11 +1168,79 @@ void Controllers::Run()
 					manual_mode=false;
 
 					//Longitudanal Controllers
-					//Altitude controller
 					href=SM_ref[0];//altitude (Make a way to trigger )
-					hdot_ref=altitude_controller(control_input,href,dt);
+					vbar_ref=SM_ref[1];
+
+					//MPC referance generator!!!
+					// mpc_referance_generator(href,vbar_ref,mpc_ref_in);
+					mpc_ref_in[0]=href;
+					mpc_ref_in[1]=vbar_ref;
+					mpc_h=-control_input.posz;
+					mpc_vbar=control_input.airspeed-vbar_trim;
+					//MPC activator
+					if(state>=1 && _vcontrol_mode.flag_control_offboard_enabled){
+						//MPC controller
+						if(!mpc_activate){
+							std::cout<<"Activate MPC"<<"\n";
+							mpc_activate=true;
+							_intergrator_alt_lim=0;//Reset altitude limit integrator
+						}
+						//Limit intergrator calculation
+						float Lim_Int=altitude_limit_intergrator(control_input,href,dt);
+						//MPC inputs(Check if you can publish here then wait for outputs before continuing)
+
+						//MPC outputs
+						hdot_ref=mpc_out.mpc_mv_out[0]-Lim_Int;
+						dT=mpc_out.mpc_mv_out[1]+T_Trim;
+
+						clas_alt_activate=false;
+
+						// Testing publish times
+						// float mpc_pub_time_step=(mpc_out.timestamp-prev_mpc_pub_time)*1e-6f;
+						// prev_mpc_pub_time=mpc_out.timestamp;
+						// std::cout<<"mpc_output_rate dt : "<<mpc_pub_time_step<<"\n";
+						// std::cout<<"MPC_mv_0 : "<<mpc_out.mpc_mv_out[0]<<" MPC_mv_1 : "<<mpc_out.mpc_mv_out[1]<<"\n";
+
+						// Custom climb rate controller gains for MPC (Causes transition problem since intergrator gains change)
+						// Ki_CR=0.4130;//Tuning for MPC
+						// Kp_CR=1.4960;//Tuning for MPC
+
+					}else{
+						//Altitude controller
+						hdot_ref=altitude_controller(control_input,href,dt);
+
+						// Testing
+						if(!clas_alt_activate){
+							std::cout<<"Activate Classical Altitude Controller"<<"\n";
+							clas_alt_activate=true;
+							_intergrator_alt_lim=0;//Reset altitude limit integrator
+						}
+						float Lim_Int=altitude_limit_intergrator(control_input,href,dt);
+						hdot_ref=hdot_ref-Lim_Int;
+
+						//Airspeed controller
+						dT=airspeed_controller(control_input,vbar_ref,dt);
+						mpc_activate=false;
+
+						// Normal climbrate controller gains
+						Ki_CR=1.0130;//Original CR gain
+						Kp_CR=2.4960;//Original CR gain
+					}
+
 					hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max);
-					float vbar_ref=SM_ref[1];
+
+					// // Testing climbrate controller
+					// if(-control_input.posz>=href && !test_log && !end_log){
+					// 	CR_start_test_time=publish_time;
+					// 	test_log=true;
+					// }else if(publish_time>=(CR_start_test_time+(float)15.00)&& publish_time<=(CR_start_test_time+(float)30.00) && test_log){
+					// 	hdot_ref=1;//Step
+					// }else if(publish_time>=(CR_start_test_time+(float)30.00)&& test_log){
+					// 	test_log=false;
+					// 	test_write=true;
+					// 	end_log=true;
+					// }
+
 					//Climbrate controller
 					float Cw_ref;
 					Cw_ref=climb_rate_controller(control_input,hdot_ref,dt);
@@ -1079,8 +1250,6 @@ void Controllers::Run()
 					NSADLC_controller(control_input,Cw_ref,dt,&defl[0]);
 					dE=defl[0];
 					dF=defl[1];
-					//Airspeed controller
-					dT=airspeed_controller(control_input,vbar_ref,dt);
 
 
 					//Lateral Controllers
@@ -1088,8 +1257,12 @@ void Controllers::Run()
 					// float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-500,0},{0,0}};//Rectangle
 					// float destinations[][2]={{0,0},{15000,0}};//Straight flight
 					// float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{0,0}};//Landing testing Rectangle
-					float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
+					// float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
+					float destinations[][2]={{0,0},{300,0},{300,300},{-1000,300},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
 					int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
+					// if(disp_count%50==0 && state>=1){
+					// 	std::cout<<"TD_point_x : "<<TD_position[0]<<" TD_point_y : "<<TD_position[1]<<"\n";
+					// }
 					//Navigation controller
 					navigation_controller(destinations,destination_size,control_input,guide_val);
 					//Guidance and Heading controllers
@@ -1100,6 +1273,8 @@ void Controllers::Run()
 					float phibar_ref=0;
 					control_input.y=guide_val[1];//check
 					control_input.ydot=guide_val[3];//check
+					y_old=control_input.y;
+					ydot_old=control_input.ydot;
 					float phi_ref_CT=guidance_controller_1(control_input,phibar_ref,y_ref,dt);
 					//Transition Multiplexer
 					float phi_ref=transition_multiplexer(phi_ref_HG,phi_ref_CT, (control_input.y-y_ref));
@@ -1209,13 +1384,19 @@ void Controllers::Run()
 				// Store data for plotting
 				if(state>0){
 					x_log.push_back(_x_guide-L_track);
-					z_log.push_back(-control_input.posz);
+					z_log.push_back(-control_input.posz);//Remove offset when done testing
 					state_log.push_back(state);
 					hdot_log.push_back(control_input.h_dot);
 					hdot_bar_ref_log.push_back(control_input.hdot_bar_ref);
-					airspeed_log.push_back(control_input.airspeed);
-					h_ref_log.push_back(href);
+					airspeed_log.push_back(control_input.airspeed-vbar_trim);
+					h_ref_log.push_back(href); //Remove offset when done testing
+					vbar_ref_log.push_back(vbar_ref);
+					hdot_ref_log.push_back(hdot_ref);
+					dTc_log.push_back(dT*_max_thrust-T_Trim);
 					publish_time_log.push_back(publish_time);
+					mp_pose_intra_log.push_back(moving_platform.mp_pose[1]);//Change based on direction of mp motion
+					mp_pose_alt_log.push_back(-moving_platform.mp_pose[2]);
+					fw_intra_log.push_back(control_input.posy);//Change based on direction landing
 				}
 
 				if(Log_data==true){
@@ -1259,11 +1440,37 @@ void Controllers::Run()
 					}
 					myfile<<"\n";
 					for(int i=0;i<sizehdot;i++){
+						myfile<<vbar_ref_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<hdot_ref_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<dTc_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
 						myfile<<publish_time_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<mp_pose_intra_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<mp_pose_alt_log[i]<<",";
+					}
+					myfile<<"\n";
+					for(int i=0;i<sizehdot;i++){
+						myfile<<fw_intra_log[i]<<",";
 					}
 					myfile.close();
 					Log_data=false;
-					x_log.clear();hdot_log.clear();hdot_bar_ref_log.clear();airspeed_log.clear();h_ref_log.clear();publish_time_log.clear();
+					// Clear logging arrays incase they are reused
+					x_log.clear();z_log.clear();state_log.clear();hdot_log.clear();hdot_bar_ref_log.clear();airspeed_log.clear();
+					h_ref_log.clear();vbar_ref_log.clear();hdot_ref_log.clear();dTc_log.clear();publish_time_log.clear();
 				}
 
 
@@ -1293,6 +1500,22 @@ void Controllers::Run()
 				// printf("Controllers\n");
 				// printf("dA : %.5f ; dE : %.5f ; dR : %.5f ; dT : %.5f\n",(double)dA,(double)dE,(double)dR,(double)dT);
 				// printf("\n");
+
+				/*Publish MPC inputs*/
+				// std::copy(mpc_ref_in,mpc_ref_in+38,mpc_ins.mpc_ref_in);
+				mpc_ins.mpc_ref_in[0]=mpc_ref_in[0];
+				mpc_ins.mpc_ref_in[1]=mpc_ref_in[1];
+				mpc_ins.mpc_mo_in[0]=mpc_h;
+				mpc_ins.mpc_mo_in[1]=mpc_vbar;
+				mpc_ins.state=state;
+
+				// TESTING
+				// std::cout<<"PX4 MPC in ref "<<mpc_ins.mpc_ref_in[0]<<" ; "<<mpc_ins.mpc_ref_in[37]<<"\n";
+				// std::cout<<"PX4 MPC in mo "<<mpc_ins.mpc_mo_in[0]<<" ; "<<mpc_ins.mpc_mo_in[1]<<"\n";
+				// std::cout<<"MPC_in publish time : "<<publish_time<<"\n";
+
+				mpc_in_pub.publish(mpc_ins);
+
 	}
 
 	}else{

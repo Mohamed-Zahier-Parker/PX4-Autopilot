@@ -193,4 +193,9 @@ protected:
 	float _max_deflection;
 	float L_track=0;
 	float psi_ref_out=0;
+	float Ki_alt_lim;
+	float _intergrator_alt_lim;
+	float _min_alt_lim;
+	float _max_alt_lim;
+	float FW_UAV_ideal_vel_I_land;
 };
