@@ -434,7 +434,7 @@ void Controllers::init_ECL_variables(){
 	// dis_t=75;
 	dg=500;
 	dis_t=100.0;
-	Ki_alt_lim=0.5;
+	Ki_alt_lim=0.6;
 	_intergrator_alt_lim=0;
 	_min_alt_lim=-2;
 	_max_alt_lim=2;
@@ -834,34 +834,34 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 	}
     	switch(state){
         	case 0 : // Waypoint state
-            		ref_out[0]=(float)34.96+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(float)34.96+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;//conventional flying
 	    		//ref_out order: h_ref, vbar_ref, y_ref, yaw_ref
 			break;
         	case 1 : //Final Approach
-            		ref_out[0]=(float)34.96+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(float)34.96+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 2 : //Glideslope Tracking
-            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
         	case 3 : //Pre-Landing
-            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
         	case 4 : //Decrab
             		Anti_Abort=true;
-            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
 		case 5 : //Flare
             		Anti_Abort=true;
-            		ref_out[0]=(L_track-_x_guide)*tan(gamma_land)+(-TD_position[3]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide)*tan(gamma_land)+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
         	case 6 : //Landed
-            		ref_out[0]=0+(-TD_position[3]);ref_out[1]=-vbar_trim;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=0+(-TD_position[2]);ref_out[1]=-vbar_trim;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
 	    }
@@ -887,9 +887,9 @@ void Controllers::landing_point(Control_Data &state_data,float mp_pose[3],float 
 	if(state>=1){
 		//Get Moving Platform position(Defined in UAV direction NED)
 		float d_ap = sqrt(pow((mp_pose[0]-state_data.posx),2)+pow((mp_pose[1]-state_data.posy),2));
-		float FW_UAV_vel_I=sqrt(pow(state_data.velx_I,2)+pow(state_data.vely_I,2)+pow(state_data.velz_I,2));
+		// float FW_UAV_vel_I=sqrt(pow(state_data.velx_I,2)+pow(state_data.vely_I,2)+pow(state_data.velz_I,2));
 		float MP_vel_I=sqrt(pow(mp_vel[0],2)+pow(mp_vel[1],2)+pow(mp_vel[2],2));
-		float land_time=d_ap/(FW_UAV_vel_I*cos(gamma)-MP_vel_I); //Choose wether you want to apply ideal fw velocity or not
+		float land_time=d_ap/(FW_UAV_ideal_vel_I_land*cos(gamma)-MP_vel_I); //Choose wether you want to apply ideal fw velocity or not
 		// float MP_psi=atan2(mp_vel[1],mp_vel[0]); //moving platform heading
 		// float da=FW_UAV_ideal_vel_I_land*cos(gamma)*land_time;
 
