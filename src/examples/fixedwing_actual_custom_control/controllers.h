@@ -162,8 +162,10 @@ public:
 private:
 	void Run() override;
 
-	uORB::SubscriptionCallbackWorkItem _att_sub{this, ORB_ID(vehicle_attitude)};
-	uORB::SubscriptionCallbackWorkItem _local_pos_sub{this, ORB_ID(vehicle_local_position)};
+	uORB::SubscriptionCallbackWorkItem _att_sub{this, ORB_ID(vehicle_attitude)};//EKF Output
+	// uORB::SubscriptionCallbackWorkItem _att_sub{this, ORB_ID(vehicle_attitude_groundtruth)};//Simulator output
+	uORB::SubscriptionCallbackWorkItem _local_pos_sub{this, ORB_ID(vehicle_local_position)};//EKF Output
+	// uORB::SubscriptionCallbackWorkItem _local_pos_sub{this, ORB_ID(vehicle_local_position_groundtruth)};//Simulator output
 	uORB::SubscriptionCallbackWorkItem airspeed_sub{this, ORB_ID(airspeed_validated)};
 
 
@@ -176,7 +178,8 @@ private:
 	uORB::Subscription vstatus_sub{ORB_ID(vehicle_status)};
 	uORB::Subscription global_sp_sub{ORB_ID(position_setpoint_triplet)};
 	uORB::Subscription estim_sub{ORB_ID(estimator_status)};
-	uORB::Subscription ang_vel_sub{ORB_ID(vehicle_angular_velocity)};
+	uORB::Subscription ang_vel_sub{ORB_ID(vehicle_angular_velocity)};//EKF Output
+	// uORB::Subscription ang_vel_sub{ORB_ID(vehicle_angular_velocity_groundtruth)};//Simulator output
 	uORB::Subscription accel_sub{ORB_ID(vehicle_acceleration)};
 	uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed_validated)};

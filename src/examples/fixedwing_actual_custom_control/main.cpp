@@ -808,7 +808,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				std::cout<<"state 5\n";
             		}
 	    	}
-        	if(-state_data.posz<(float)0.5 && state_data.Cw<-(float)15){//change in PX4 code to acceleration change
+        	if(-state_data.posz<(float)0.5 && state_data.Cw<-(float)18){//change in PX4 code to acceleration change
 			if(state==5 || state!=6){
             			state=6;//Landed
             			END=true;
