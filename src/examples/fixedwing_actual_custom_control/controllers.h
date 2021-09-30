@@ -92,6 +92,8 @@
 #include <uORB/topics/fw_controllers_sm.h>
 #include <uORB/topics/mpc_inputs.h>
 #include <uORB/topics/mpc_outputs.h>
+#include <uORB/topics/wind_estimate.h>
+#include <uORB/topics/commander_state.h>
 
 //Graph plotting
 #include <iostream>
@@ -185,8 +187,11 @@ private:
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed_validated)};
 	//uORB::SubscriptionData<airspeed_validated_s> _airspeed_validated_sub{ORB_ID(airspeed_validated)};
 	//uORB::Subscription airspeed_sub{ORB_ID(airspeed)};
+	uORB::Subscription airspeed_sens_sub{ORB_ID(airspeed)};
 	uORB::Subscription _mov_plat_sub{ORB_ID(moving_platform)};
 	uORB::Subscription mpc_out_sub{ORB_ID(mpc_outputs)};
+	uORB::Subscription wind_sub{ORB_ID(wind_estimate)};
+	uORB::Subscription commander_state_sub{ORB_ID(commander_state)};
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
@@ -240,6 +245,9 @@ private:
 	uint64_t prev_mpc_pub_time=0;
 	float CR_start_test_time=0;
 	bool test_log=false,test_write=false,end_log=false;
+
+	//Flight mode control
+	bool mcl_disp=false; //Manual control lost display
 
 
 	DEFINE_PARAMETERS(

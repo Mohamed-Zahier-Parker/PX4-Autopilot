@@ -49,6 +49,7 @@
 #include <algorithm>
 #include <iostream>
 //#include <lib/matrix/matrix/math.hpp>
+#include <bitset>
 
 
 #include <poll.h>
@@ -688,7 +689,13 @@ void Controllers::navigation_controller(float D[][2],int Destination_size,const 
 
 float Controllers::guidance_controller_2(float guide_val[4]){
 	// workout and return psi_ref
-	float psi_ref=K_y*(0-guide_val[1])+guide_val[2];
+	// float psi_ref=K_y*(0-guide_val[1])+guide_val[2];
+	// return psi_ref;
+
+	// TESTING FIXING INTAIL HEADING ISSUE (WORKS FOR NOW)
+	float delta_psi_ref=K_y*(0-guide_val[1]);
+	delta_psi_ref=math::constrain(delta_psi_ref,(float)-M_PI/4,(float)M_PI/4); //Constrain delta heading referance (!!!Confirm!!!) (45 degree limit for now)
+	float psi_ref=delta_psi_ref+guide_val[2];
 	return psi_ref;
 }
 
@@ -786,7 +793,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				std::cout<<"phi : "<<state_data.phi*(float)(180/M_PI)<<"\n";
 				std::cout<<"y : "<<state_data.y<<"\n";
 				std::cout<<"herr : "<<abs((float)h_ref_SM-(-(float)state_data.posz))<<"\n";
-                		if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && state_data.h_dot>(float)-1.40 && abs(state_data.beta)<(float)(5.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
+                		if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && state_data.h_dot>(float)-1.50 && abs(state_data.beta)<(float)(5.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
                     			state=3;//Pre-landing
 					std::cout<<"state 3\n";
 				}else{
@@ -844,11 +851,11 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 			break;
         	case 2 : //Glideslope Tracking
             		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
-			yaw_ctrl=true;
+			yaw_ctrl=false;
 			break;
         	case 3 : //Pre-Landing
             		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
-			yaw_ctrl=true;
+			yaw_ctrl=false;
 			break;
         	case 4 : //Decrab
             		Anti_Abort=true;
@@ -998,7 +1005,18 @@ void Controllers::Run()
 
 	vehicle_control_mode_poll();
 
-	if(_vcontrol_mode.flag_control_position_enabled || _vcontrol_mode.flag_control_offboard_enabled){ //FIX CONTROL MODE
+	/*Get commander state*/
+	commander_state_s com_state{};
+	commander_state_sub.copy(&com_state);
+
+	// if(_vcontrol_mode.flag_control_position_enabled || _vcontrol_mode.flag_control_offboard_enabled){ //FIX CONTROL MODE
+
+	if(!_vcontrol_mode.flag_control_manual_enabled || (com_state.main_state == com_state.MAIN_STATE_POSCTL || com_state.main_state == com_state.MAIN_STATE_OFFBOARD)){ //FIX CONTROL MODE
+
+	if(!_vcontrol_mode.flag_control_manual_enabled && !mcl_disp){
+		std::cout<<"Manual Control Signal Lost\n";
+		mcl_disp=true;
+	}
 
 	// airspeed_validated_s airspeed;
 	// airspeed_s airspeed;
@@ -1052,12 +1070,19 @@ void Controllers::Run()
 		// airspeed_s airspeed;
 		// airspeed_sub.copy(&airspeed);
 
+		airspeed_s airspeed_sens;
+		airspeed_sens_sub.copy(&airspeed_sens);
+
 		moving_platform_s moving_platform{};
 		_mov_plat_sub.copy(&moving_platform);
 
 		/*get local copy of mpc out states*/
 		mpc_outputs_s mpc_out{};
 		mpc_out_sub.copy(&mpc_out);
+
+		/*Get windspeed value*/
+		wind_estimate_s wind{};
+		wind_sub.copy(&wind);
 
 		// TESTING
 		// if(disp_count%100==0){
@@ -1112,10 +1137,13 @@ void Controllers::Run()
 		// printf("Controllers Psi :    %f\n",(double)control_input.psi*180/M_PI);
 		// printf("\n");
 
-		if(disp_count%1==0){
+		if(disp_count%1==0 && state!=6){
 			// std::cout<<"fw_px4_x : "<<control_input.posx<<" fw_px4_y : "<<control_input.posy<<" fw_px4_z : "<<-control_input.posz<<"\n";
 			// std::cout<<"Moving Platform posex : "<<moving_platform.mp_pose[0]<<" Moving Platform posey : "<<moving_platform.mp_pose[1]<<" Moving Platform posez : "<<-moving_platform.mp_pose[2]<<"\n";
 			// std::cout<<"FW_px4_X : "<<local_position.x<<"FW_px4_Y"<<local_position.y<<"\n";
+			// std::cout<<"ECL Status : "<<std::bitset<16>(estim.control_mode_flags)<<"\n";
+			// std::cout<<"Wind_North : "<<wind.windspeed_north<<" Wind_East : "<<wind.windspeed_east<<"\n";
+			// std::cout<<"Airspeed : "<<airspeed_sens.true_airspeed_m_s<<"\n";
 		}
 
 				if (global_sp_updated) {
@@ -1161,7 +1189,7 @@ void Controllers::Run()
 							std::cout<<"Initialise Intergrators\n";
 							initialise_integrators(control_input);
 						}
-						printf("\n");
+						// printf("\n");
 
 					}
 					controllers_activate=true;
@@ -1258,7 +1286,8 @@ void Controllers::Run()
 					// float destinations[][2]={{0,0},{15000,0}};//Straight flight
 					// float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{0,0}};//Landing testing Rectangle
 					// float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
-					float destinations[][2]={{0,0},{300,0},{300,300},{-1000,300},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
+					// float destinations[][2]={{0,0},{300,0},{300,300},{-1000,300},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
+					float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing bigger Rectangle
 					int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
 					// if(disp_count%50==0 && state>=1){
 					// 	std::cout<<"TD_point_x : "<<TD_position[0]<<" TD_point_y : "<<TD_position[1]<<"\n";
@@ -1519,6 +1548,7 @@ void Controllers::Run()
 	}
 
 	}else{
+		mcl_disp=false;
 		/*In Manual Mode*/
 		if(!manual_mode){
 			printf("!!!Manual Mode!!!\n");
