@@ -195,6 +195,23 @@ void Simulator::send_controls()
 	}
 }
 
+void Simulator::send_sm_state()
+{
+	// orb_copy(ORB_ID(fw_controllers_sm), _fw_controllers_sm_sub, &fw_sm_state);
+	if(_fw_controllers_sm_sub.update(&fw_sm_state)){
+		mavlink_sm_state_t sm_state_send{};
+		sm_state_send.time_usec=hrt_absolute_time() + hrt_absolute_time_offset();
+		sm_state_send.state=fw_sm_state.state;
+
+		mavlink_message_t message{};
+		mavlink_msg_sm_state_encode(_param_mav_sys_id.get(), _param_mav_comp_id.get(), &message, &sm_state_send);
+
+		// PX4_DEBUG("sending controls t=%ld (%ld)", _actuator_outputs.timestamp, hil_act_control.time_usec);
+
+		send_mavlink_message(message);
+	}
+}
+
 void Simulator::update_sensors(const hrt_abstime &time, const mavlink_hil_sensor_t &sensors)
 {
 	// temperature only updated with baro
@@ -327,6 +344,8 @@ void Simulator::update_sensors(const hrt_abstime &time, const mavlink_hil_sensor
 		report.differential_pressure_raw_pa = sensors.diff_pressure * 100.0f; // convert from millibar to bar;
 
 		_differential_pressure_pub.publish(report);
+
+		// std::cout<<"Sens_Temp : "<<_sensors_temperature<<"\n";
 	}
 }
 
@@ -368,6 +387,11 @@ void Simulator::handle_message(const mavlink_message_t *msg)
 	case MAVLINK_MSG_ID_HIL_STATE_QUATERNION:
 		handle_message_hil_state_quaternion(msg);
 		break;
+
+	case MAVLINK_MSG_ID_MP_SPECS:
+		handle_message_moving_platform(msg);
+		break;
+
 	}
 }
 
@@ -579,6 +603,24 @@ void Simulator::handle_message_hil_state_quaternion(const mavlink_message_t *msg
 	}
 }
 
+void Simulator::handle_message_moving_platform(const mavlink_message_t *msg){
+
+	mavlink_mp_specs_t mp_receive;
+	mavlink_msg_mp_specs_decode(msg, &mp_receive);
+
+	moving_platform_s mp_specs {};
+
+	mp_specs.mp_pose[0]=mp_receive.mp_position[0];
+	mp_specs.mp_pose[1]=mp_receive.mp_position[1];
+	mp_specs.mp_pose[2]=mp_receive.mp_position[2];
+	mp_specs.mp_vel[0]=mp_receive.mp_velocity[0];
+	mp_specs.mp_vel[1]=mp_receive.mp_velocity[1];
+	mp_specs.mp_vel[2]=mp_receive.mp_velocity[2];
+	mp_specs.timestamp= hrt_absolute_time();
+
+	_moving_platform_pub.publish(mp_specs);
+}
+
 void Simulator::handle_message_landing_target(const mavlink_message_t *msg)
 {
 	mavlink_landing_target_t landing_target_mavlink;
@@ -725,6 +767,9 @@ void Simulator::send()
 			px4_lockstep_wait_for_components();
 
 			send_controls();
+
+			// Send custom controllers state machine state
+			send_sm_state();
 		}
 	}
 

@@ -120,6 +120,7 @@ set(models
 	plane_cam
 	plane_catapult
 	plane_lidar
+	plane_custom
 	px4vision
 	r1_rover
 	rover

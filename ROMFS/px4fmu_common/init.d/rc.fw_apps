@@ -13,9 +13,15 @@ ekf2 start &
 #
 # Start attitude controller.
 #
-fw_att_control start
-fw_pos_control_l1 start
-airspeed_selector start
+# fw_att_control start
+# fw_pos_control_l1 start
+
+#custom controller
+ex_fixedwing_actual_custom_control start
+airspeed_selector_custom start
+
+
+# airspeed_selector start
 #
 # Start Land Detector.
 #

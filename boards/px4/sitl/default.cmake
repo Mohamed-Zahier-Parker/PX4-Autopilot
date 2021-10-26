@@ -25,7 +25,7 @@ px4_add_board(
 		#uavcan
 	MODULES
 		airship_att_control
-		airspeed_selector
+		# airspeed_selector #Original had it uncommented
 		attitude_estimator_q
 		camera_feedback
 		commander
@@ -90,7 +90,7 @@ px4_add_board(
 		fake_gps
 		fake_imu
 		fake_magnetometer
-		fixedwing_control # Tutorial code from https://px4.io/dev/example_fixedwing_control
+		# fixedwing_control # Tutorial code from https://px4.io/dev/example_fixedwing_control
 		hello
 		#hwtest # Hardware test
 		#matlab_csv_serial
@@ -99,6 +99,8 @@ px4_add_board(
 		rover_steering_control # Rover example app
 		uuv_example_app
 		work_item
+		fixedwing_actual_custom_control
+		airspeed_selector_custom
 	)
 
 set(config_sitl_viewer jmavsim CACHE STRING "viewer for sitl")

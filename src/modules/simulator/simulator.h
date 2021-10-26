@@ -73,6 +73,10 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_command_ack.h>
+#include <uORB/topics/moving_platform.h>
+#include <uORB/topics/fw_controllers_sm.h>
+#include <algorithm>
+#include <iostream>
 
 #include <random>
 
@@ -228,6 +232,7 @@ private:
 	void handle_message_optical_flow(const mavlink_message_t *msg);
 	void handle_message_rc_channels(const mavlink_message_t *msg);
 	void handle_message_vision_position_estimate(const mavlink_message_t *msg);
+	void handle_message_moving_platform(const mavlink_message_t *msg);
 
 	void parameters_update(bool force);
 	void poll_for_MAVLink_messages();
@@ -237,6 +242,7 @@ private:
 	void send_heartbeat();
 	void send_mavlink_message(const mavlink_message_t &aMsg);
 	void update_sensors(const hrt_abstime &time, const mavlink_hil_sensor_t &sensors);
+	void send_sm_state();
 
 	static void *sending_trampoline(void *);
 
@@ -249,6 +255,7 @@ private:
 	uORB::Publication<vehicle_global_position_s>	_gpos_ground_truth_pub{ORB_ID(vehicle_global_position_groundtruth)};
 	uORB::Publication<vehicle_local_position_s>	_lpos_ground_truth_pub{ORB_ID(vehicle_local_position_groundtruth)};
 	uORB::Publication<input_rc_s>			_input_rc_pub{ORB_ID(input_rc)};
+	uORB::Publication<moving_platform_s>		_moving_platform_pub{ORB_ID(moving_platform)};
 
 	// HIL GPS
 	static constexpr int MAX_GPS = 3;
@@ -260,8 +267,12 @@ private:
 	int _actuator_outputs_sub{-1};
 	actuator_outputs_s _actuator_outputs{};
 
+	fw_controllers_sm_s fw_sm_state{};
+
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
 	uORB::Subscription _vehicle_command_sub{ORB_ID(vehicle_command)};
+
+	uORB::Subscription _fw_controllers_sm_sub{ORB_ID(fw_controllers_sm)};
 
 	// hil map_ref data
 	map_projection_reference_s	_global_local_proj_ref{};

@@ -185,6 +185,10 @@ set(msg_files
 	wheel_encoders.msg
 	wind.msg
 	yaw_estimator_status.msg
+	moving_platform.msg
+	fw_controllers_sm.msg
+	mpc_inputs.msg
+	mpc_outputs.msg
 )
 
 if(NOT px4_constrained_flash_build)
