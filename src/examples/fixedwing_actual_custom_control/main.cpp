@@ -1602,6 +1602,14 @@ void Controllers::Run()
 		/*Assign actuators*/
 		actuators.control[0]=dA_pub;actuators.control[1]=dE_pub;actuators.control[2]=dR_pub;actuators.control[3]=dT_pub;actuators.control[4]=dF_pub;
 
+		/*Testing Control Surface Deflection*/
+		dA_pub=20.0/180.0*M_PI;
+		dE_pub=20.0/180.0*M_PI;
+		dT_pub=0.0;
+		dR_pub=20.0/180.0*M_PI;
+		dF_pub=20.0/180.0*M_PI;
+		actuators.control[0]=dA_pub;actuators.control[1]=dE_pub;actuators.control[2]=dR_pub;actuators.control[3]=dT_pub;actuators.control[4]=dF_pub;
+
 		/*set setpoint rates*/
 		//Check!!!
 		rates_sp.roll=publish_roll;

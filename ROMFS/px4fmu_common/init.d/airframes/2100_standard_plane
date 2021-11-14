@@ -26,7 +26,7 @@
 param set-default PWM_AUX_RATE 50
 param set-default PWM_MAIN_RATE 50
 
-set MIXER AETRFG
+set MIXER AETRFG_Custom
 
 # Rate must be set by group (see pwm info).
 # Throttle is in the same group as servos.
