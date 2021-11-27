@@ -105,8 +105,8 @@
 #include <uORB/topics/vehicle_trajectory_waypoint.h>
 // #include <uORB/topics/moving_platform.h>
 #include <uORB/topics/mpc_outputs.h>
-#include <algorithm>
-#include <iostream>
+// #include <algorithm>
+// #include <iostream>
 
 #if !defined(CONSTRAINED_FLASH)
 # include <uORB/topics/debug_array.h>

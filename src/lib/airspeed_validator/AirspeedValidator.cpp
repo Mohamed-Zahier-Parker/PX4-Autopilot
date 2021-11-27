@@ -38,7 +38,6 @@
  */
 
 #include "AirspeedValidator.hpp"
-#include "iostream"
 
 
 void

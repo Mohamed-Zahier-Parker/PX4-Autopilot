@@ -56,7 +56,7 @@ px4_add_board(
 		tone_alarm
 		uavcan
 	MODULES
-		airspeed_selector
+		# airspeed_selector
 		attitude_estimator_q
 		battery_status
 		camera_feedback
@@ -134,4 +134,6 @@ px4_add_board(
 		#rover_steering_control # Rover example app
 		#uuv_example_app
 		#work_item
+		fixedwing_actual_custom_control
+		airspeed_selector_custom
 	)

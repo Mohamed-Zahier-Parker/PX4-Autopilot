@@ -63,7 +63,7 @@
 #include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/airspeed_wind.h>
 
-#include <iostream>
+// #include <iostream>
 
 using namespace time_literals;
 

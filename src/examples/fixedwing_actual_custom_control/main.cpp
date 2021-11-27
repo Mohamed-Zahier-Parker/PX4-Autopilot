@@ -46,10 +46,10 @@
 #include "controllers.h"
 //#include <math.h>
 #include <cmath>
-#include <algorithm>
-#include <iostream>
+// #include <algorithm>
+// #include <iostream>
 //#include <lib/matrix/matrix/math.hpp>
-#include <bitset>
+// #include <bitset>
 
 
 #include <poll.h>
@@ -322,7 +322,7 @@ void control_heading(const struct vehicle_global_position_s *pos, const struct p
 void matrix_mult(float mat1[][10], float mat2[][10],float mat_mult[][10], int r1, int c1, int r2, int c2)
 {
 	if(c1!=r2){ // incorrect dimentions
-		printf("Incorrect dimenstion size");
+		PX4_INFO("Incorrect dimenstion size");
 		thread_should_exit=true;
 	}else{
 		// Initializing elements of matrix mult to 0.
@@ -383,8 +383,8 @@ void Controllers::init_ECL_variables(){
 	K_q=-0.034739;//pitch rate damper gain
 	// float temp[2][6]={{-0.0106,24.6502,-0.3462,-38.3493,0.0285,-12.5189},{34.2713,13.9895,-0.0457,-13.7433,41.4445,6.3751}};
 	// float temp[2][6]={{0.1053,-0.4295,-0.2568,-9.0674,0.1108,-0.3560},{15.2188,15.7673,-0.0806,-18.3016,16.9485,0.9283}};
-	float temp[2][6]={{0.0319,0.0458,-0.0918,-2.9371,0.0323,-0.1105},{15.2361,15.7865,-0.1288,-19.7905,16.9658,0.8698}};//best so far
-	std::copy(&temp[0][0],&temp[0][0]+2*6,&K_ASCR[0][0]);//airspeed and climbrate controller gain
+	// float temp[2][6]={{0.0319,0.0458,-0.0918,-2.9371,0.0323,-0.1105},{15.2361,15.7865,-0.1288,-19.7905,16.9658,0.8698}};//best so far
+	// std::copy(&temp[0][0],&temp[0][0]+2*6,&K_ASCR[0][0]);//airspeed and climbrate controller gain
 	K_h=1.75;//altitude controller gain
 	K_P_RAC=0.03679;//roll angle controller proportional control gain
 	K_I_RAC=0.0147;//roll angle controller intergrator control gain
@@ -588,12 +588,12 @@ float Controllers::yaw_controller(const Control_Data &state_data,float psi_ref,c
 
 float Controllers::heading_controller(const Control_Data &state_data,float psi_ref)
 {
-	float psi_error,u_ref[3]={cos(psi_ref),sin(psi_ref),0},u[3]={cos(state_data.psi),sin(state_data.psi),0},u_D[3]={0,0,1};
+	float psi_error,u_ref[3]={(float)cos(psi_ref),(float)sin(psi_ref),0},u[3]={(float)cos(state_data.psi),(float)sin(state_data.psi),0},u_D[3]={0,0,1};
 	float p_mat[3];
 	crossProduct(u,u_ref,p_mat);
 	float x=dotProduct(p_mat,u_D);
 	float sign=((x > 0) - (x < 0));
-	psi_error= sign*acos(dotProduct(u,u_ref));
+	psi_error= sign*(float)acos(dotProduct(u,u_ref));
 	float phi_ref= psi_error*K_psi;
 	return phi_ref;
 }
@@ -646,28 +646,37 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
        		_loc_guide=1;
 		_x_guide=0;
        		waypoint_END=false;
-		std::cout<<"Abort\n";
+		// std::cout<<"Abort\n";
+		PX4_INFO("Abort");
+
 	}
 	L_track=sqrt(pow((Destinations[_loc_guide][1]-Destinations[_loc_guide-1][1]),2)+pow((Destinations[_loc_guide][0]-Destinations[_loc_guide-1][0]),2));//Track length
 	if(_x_guide>L_track && _loc_guide!=Destination_size){
         	if(_loc_guide!=(Destination_size-1))//If not final destination then update waypoints
 		{
-	    	std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//copy starting point coordinates into out array
-		std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//copy destination point coordinates into out array
-            	_loc_guide=_loc_guide+1;
+	    	// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//copy starting point coordinates into out array
+		out[0][0]=Destinations[_loc_guide][0];out[0][1]=Destinations[_loc_guide][1];
+		// std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//copy destination point coordinates into out array
+            	out[1][0]=Destinations[_loc_guide+1][0];out[1][1]=Destinations[_loc_guide+1][1];
+		_loc_guide=_loc_guide+1;
 		}else
 		{
 		waypoint_END=true;//End waypoint navigation
-		std::cout<<"waypoint_END\n";
-		std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//Update last starting point
-		std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//keep desitination the same
+		// std::cout<<"waypoint_END\n";
+		PX4_INFO("waypoint_END");
+		// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//Update last starting point
+		out[0][0]=Destinations[_loc_guide][0];out[0][1]=Destinations[_loc_guide][1];
+		// std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//keep desitination the same
+		out[1][0]=Destinations[_loc_guide+1][0];out[1][1]=Destinations[_loc_guide+1][1];
  	        _loc_guide=_loc_guide+1;
 		L_track=sqrt(pow((Destinations[_loc_guide][1]-Destinations[_loc_guide-1][1]),2)+pow((Destinations[_loc_guide][0]-Destinations[_loc_guide-1][0]),2));
         	}
     	}else
     	{ //Did not reach destination point yet
-       	std::copy(&Destinations[_loc_guide-1][0],&Destinations[_loc_guide-1][0]+1*2,&out[0][0]);//keep start point the same
-	std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[1][0]);//keep destination the same
+       	// std::copy(&Destinations[_loc_guide-1][0],&Destinations[_loc_guide-1][0]+1*2,&out[0][0]);//keep start point the same
+	out[0][0]=Destinations[_loc_guide-1][0];out[0][1]=Destinations[_loc_guide-1][1];
+	// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[1][0]);//keep destination the same
+	out[1][0]=Destinations[_loc_guide][0];out[1][1]=Destinations[_loc_guide][1];
 	if(_loc_guide==Destination_size){ //Going to land
 			waypoint_END=true;
 	}
@@ -758,13 +767,15 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 	//flare calculation
 	float dd=V_ground*Tau_yaw;  //distance of state changes
 	float h_land=0.0;//Flare height
-	float d_flare=h_land/tan(gamma_land);
+	float d_flare=h_land/(float)tan(gamma_land);
 
     	if(waypoint_END==true){
         	if(Land==true){//Decision 1
             		if(state==0){
                 	state=1;//final approach
-			std::cout<<"state 1\n";
+			// std::cout<<"state 1\n";
+			// printf("state 1\n");
+			PX4_INFO("state 1");
             		}
 		}else{
            		Abort=true;
@@ -775,7 +786,9 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
             		if(state==1){
                 		if(abs(h_ref_SM-(-state_data.posz))<1){//Decision 2
                     			state=2;//Glideslope tracking
-					std::cout<<"state 2\n";
+					// std::cout<<"state 2\n";
+					// printf("state 2\n");
+					PX4_INFO("state 2");
 			    	}else{
                     			Abort=true;
                     			state=0;
@@ -786,16 +799,25 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
         	if((L_track-_x_guide-d_flare)<dis_t && (L_track-_x_guide-d_flare)>dd){
             		if(state==2){
 				// Display states that are checked
-				std::cout<<"airspeed : "<<state_data.airspeed<<"\n";
-				std::cout<<"hdot : "<<state_data.h_dot<<"\n";
-				std::cout<<"beta : "<<state_data.beta*(float)(180/M_PI)<<"\n";
-				std::cout<<"theta : "<<state_data.theta*(float)(180/M_PI)<<"\n";
-				std::cout<<"phi : "<<state_data.phi*(float)(180/M_PI)<<"\n";
-				std::cout<<"y : "<<state_data.y<<"\n";
-				std::cout<<"herr : "<<abs((float)h_ref_SM-(-(float)state_data.posz))<<"\n";
+				// std::cout<<"airspeed : "<<state_data.airspeed<<"\n";
+				// printf("airspeed : %f \n ",(double)state_data.airspeed);
+				PX4_INFO("airspeed : \t%.2f",(double)state_data.airspeed);
+				// std::cout<<"hdot : "<<state_data.h_dot<<"\n";
+				PX4_INFO("hdot : \t%.2f",(double)state_data.h_dot);
+				// std::cout<<"beta : "<<state_data.beta*(float)(180/M_PI)<<"\n";
+				PX4_INFO("beta : \t%.2f",(double)(state_data.beta*(float)(180.0/M_PI)));
+				// std::cout<<"theta : "<<state_data.theta*(float)(180/M_PI)<<"\n";
+				PX4_INFO("theta : \t%.2f",(double)(state_data.theta*(float)(180/M_PI)));
+				// std::cout<<"phi : "<<state_data.phi*(float)(180/M_PI)<<"\n";
+				PX4_INFO("phi : \t%.2f",(double)(state_data.phi*(float)(180/M_PI)));
+				// std::cout<<"y : "<<state_data.y<<"\n";
+				PX4_INFO("y :  \t%.2f",(double)state_data.y);
+				// std::cout<<"herr : "<<abs((float)h_ref_SM-(-(float)state_data.posz))<<"\n";
+				PX4_INFO("herr :  \t%.2f",(double)abs((float)h_ref_SM-(-(float)state_data.posz)));
                 		if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && state_data.h_dot>(float)-1.50 && abs(state_data.beta)<(float)(5.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
                     			state=3;//Pre-landing
-					std::cout<<"state 3\n";
+					// std::cout<<"state 3\n";
+					PX4_INFO("state 3");
 				}else{
                     			Abort=true;
                     			state=0;
@@ -806,33 +828,42 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
         	if((L_track-_x_guide-d_flare)<=dd){
             		if(state==3){
                 		state=4;//decrab (cannot abort)
-				std::cout<<"state 4\n";
+				// std::cout<<"state 4\n";
+				PX4_INFO("state 4");
             		}
 	    	}
 		if((L_track-_x_guide)<=d_flare && d_flare>0){
             		if(state==4){
                 		state=5;//flare (cannot abort)
-				std::cout<<"state 5\n";
+				// std::cout<<"state 5\n";
+				PX4_INFO("state 5");
             		}
 	    	}
         	if(-state_data.posz<(float)0.5 && state_data.Cw<-(float)18){//change in PX4 code to acceleration change
 			if(state==5 || state!=6){
             			state=6;//Landed
             			END=true;
-				std::cout<<"state 6\n";
+				// std::cout<<"state 6\n";
+				PX4_INFO("state 6");
 				Log_data=true;
 				// Display if hit target or not and miss distance
 				float fw_pos_land=sqrt(pow(state_data.posx,2.0)+pow(state_data.posy,2.0));
 				float mp_pos_land=sqrt(pow(mp_pos[0],2.0)+pow(mp_pos[1],2.0));
-				std::cout<<"Miss Distance : "<<(fw_pos_land-mp_pos_land)<<"\n";
-				std::cout<<"fw_x : "<<state_data.posx<<" fw_y : "<<state_data.posy<<" fw_z : "<<state_data.posz<<"\n";
-				std::cout<<"mp_x : "<<mp_pos[0]<<" mp_y : "<<mp_pos[1]<<" mp_z : "<<mp_pos[2]<<"\n";
+				// std::cout<<"Miss Distance : "<<(fw_pos_land-mp_pos_land)<<"\n";
+				PX4_INFO("Miss Distance : \t%.2f",(double)(fw_pos_land-mp_pos_land));
+				// std::cout<<"fw_x : "<<state_data.posx<<" fw_y : "<<state_data.posy<<" fw_z : "<<state_data.posz<<"\n";
+				PX4_INFO("fw_x : \t%.2f fw_y : \t%.2f fw_z : \t%.2f",(double)state_data.posx,(double)state_data.posy,(double)state_data.posz);
+				// std::cout<<"mp_x : "<<mp_pos[0]<<" mp_y : "<<mp_pos[1]<<" mp_z : "<<mp_pos[2]<<"\n";
+				PX4_INFO("mp_x : \t%.2f mp_y : \t%.2f mp_z : \t%.2f",(double)mp_pos[0],(double)mp_pos[1],(double)mp_pos[2]);
 				if(abs(mp_pos_land-fw_pos_land)<=(float)1.5){ //Depends on size of platform(for now it is 3m long therefore +-1.5m is range)
-					std::cout<<"Platform Hit\n";
+					// std::cout<<"Platform Hit\n";
+					PX4_INFO("Platform Hit");
 				}else{
-					std::cout<<"Ground Hit\n";
+					// std::cout<<"Ground Hit\n";
+					PX4_INFO("Ground Hit");
 				}
-				std::cout<<"TD_X : "<<TD_position[0]<<" TD_Y : "<<TD_position[1]<<" TD_Z : "<<TD_position[2]<<"\n";//Touch Down point
+				// std::cout<<"TD_X : "<<TD_position[0]<<" TD_Y : "<<TD_position[1]<<" TD_Z : "<<TD_position[2]<<"\n";//Touch Down point
+				PX4_INFO("TD_x : \t%.2f TD_y : \t%.2f TD_z : \t%.2f",(double)TD_position[0],(double)TD_position[1],(double)TD_position[2]);
 			}
         	}
 	}else{
@@ -850,21 +881,21 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 			yaw_ctrl=false;
 			break;
         	case 2 : //Glideslope Tracking
-            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 3 : //Pre-Landing
-            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 4 : //Decrab
             		Anti_Abort=true;
-            		ref_out[0]=(L_track-_x_guide-d_flare)*tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
 		case 5 : //Flare
             		Anti_Abort=true;
-            		ref_out[0]=(L_track-_x_guide)*tan(gamma_land)+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide)*(float)tan(gamma_land)+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
         	case 6 : //Landed
@@ -883,10 +914,10 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 	if(state<2){
 		state_data.hdot_bar_ref=0;
 	}else if(state>=2 && state<5){
-		state_data.hdot_bar_ref=-V_ground*sin(gamma);
+		state_data.hdot_bar_ref=-V_ground*(float)sin(gamma);
 	}else{
 		//state_data.hdot_bar_ref=-V_ground*sin(gamma_land);// For flaring
-		state_data.hdot_bar_ref=-V_ground*sin(gamma);
+		state_data.hdot_bar_ref=-V_ground*(float)sin(gamma);
 	}
 }
 
@@ -896,7 +927,7 @@ void Controllers::landing_point(Control_Data &state_data,float mp_pose[3],float 
 		float d_ap = sqrt(pow((mp_pose[0]-state_data.posx),2)+pow((mp_pose[1]-state_data.posy),2));
 		// float FW_UAV_vel_I=sqrt(pow(state_data.velx_I,2)+pow(state_data.vely_I,2)+pow(state_data.velz_I,2));
 		float MP_vel_I=sqrt(pow(mp_vel[0],2)+pow(mp_vel[1],2)+pow(mp_vel[2],2));
-		float land_time=d_ap/(FW_UAV_ideal_vel_I_land*cos(gamma)-MP_vel_I); //Choose wether you want to apply ideal fw velocity or not
+		float land_time=d_ap/(FW_UAV_ideal_vel_I_land*(float)cos(gamma)-MP_vel_I); //Choose wether you want to apply ideal fw velocity or not
 		// float MP_psi=atan2(mp_vel[1],mp_vel[0]); //moving platform heading
 		// float da=FW_UAV_ideal_vel_I_land*cos(gamma)*land_time;
 
@@ -932,7 +963,7 @@ void Controllers::mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[
 			// }else{
 			// 	mpc_ref[i]=v_ref;
 			// }
-			mpc_ref[i*2]=h_ref+(i)*tan(-gamma)*MPC_Ts;
+			mpc_ref[i*2]=h_ref+(i)*(float)tan(-gamma)*(float)MPC_Ts;
 			mpc_ref[i*2+1]=v_ref;
 		}else{
 			// if(i<MPC_P){
@@ -1014,7 +1045,8 @@ void Controllers::Run()
 	if(!_vcontrol_mode.flag_control_manual_enabled || (com_state.main_state == com_state.MAIN_STATE_POSCTL || com_state.main_state == com_state.MAIN_STATE_OFFBOARD)){ //FIX CONTROL MODE
 
 	if(!_vcontrol_mode.flag_control_manual_enabled && !mcl_disp){
-		std::cout<<"Manual Control Signal Lost\n";
+		// std::cout<<"Manual Control Signal Lost\n";
+		PX4_INFO("Manual Control Signal Lost");
 		mcl_disp=true;
 	}
 
@@ -1167,7 +1199,7 @@ void Controllers::Run()
 				state_machine(control_input,SM_ref,moving_platform.mp_pose);
 
 				// Publish time
-				float publish_time = hrt_absolute_time()*1e-6f;
+				// float publish_time = hrt_absolute_time()*1e-6f;
 
 				/*Run Landing point algorithm*/
 				landing_point(control_input,moving_platform.mp_pose,moving_platform.mp_vel);
@@ -1181,14 +1213,17 @@ void Controllers::Run()
 				if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
 				//if(1){
 					if(!controllers_activate){
-						printf("!!!Activated Controllers!!!\n");
+						// printf("!!!Activated Controllers!!!\n");
+						PX4_INFO("!!!Activated Controllers!!!");
 						//_fw_cust_ctrls.reset_integrators();
 						//reset_integrators();
 						if(!manual_mode){//started in automode
 							reset_integrators();
-							std::cout<<"Reset Intergrators\n";
+							// std::cout<<"Reset Intergrators\n";
+							PX4_INFO("Reset Intergrators");
 						}else{ //transition from manual to auto mode
-							std::cout<<"Initialise Intergrators\n";
+							// std::cout<<"Initialise Intergrators\n";
+							PX4_INFO("Initialise Intergrators");
 							initialise_integrators(control_input);
 						}
 						// printf("\n");
@@ -1211,7 +1246,8 @@ void Controllers::Run()
 					if(state>=1 && _vcontrol_mode.flag_control_offboard_enabled){
 						//MPC controller
 						if(!mpc_activate){
-							std::cout<<"Activate MPC"<<"\n";
+							// std::cout<<"Activate MPC"<<"\n";
+							PX4_INFO("Activate MPC");
 							mpc_activate=true;
 							_intergrator_alt_lim=0;//Reset altitude limit integrator
 						}
@@ -1241,7 +1277,8 @@ void Controllers::Run()
 
 						// Testing
 						if(!clas_alt_activate){
-							std::cout<<"Activate Classical Altitude Controller"<<"\n";
+							// std::cout<<"Activate Classical Altitude Controller"<<"\n";
+							PX4_INFO("Activate Classical Altitude Controller");
 							clas_alt_activate=true;
 							_intergrator_alt_lim=0;//Reset altitude limit integrator
 						}
@@ -1392,11 +1429,20 @@ void Controllers::Run()
 
 
 
-				//Gazebo axes compensation
-				dA=-dA;
-				dE=-dE;
-				dR=-dR;
-				dF=-dF;
+				//!!!CHECK BELOW!!!
+
+				/* Gazebo axes compensation for SIMULATION*/
+				// dA=-dA;
+				// dE=-dE;
+				// dR=-dR;
+				// dF=-dF;
+
+				/* Compensating for phyical control surface deformation for PIXHAWK 4 CODE*/
+				dA=-dA * (float) 2.223525;
+				dE=-dE * (float)1.8193;// Scaler is for controller only
+				dT=dT;
+				dR=-dR * (float)1.60315;
+				dF=-dF * (float) 2.5331025;
 
 				//If Landed
 				if(state==6 || control_input.posz>=(float)0.0){
@@ -1414,96 +1460,96 @@ void Controllers::Run()
 				// }
 
 				// Store data for plotting
-				if(state>0){
-					x_log.push_back(_x_guide-L_track);
-					z_log.push_back(-control_input.posz);//Remove offset when done testing
-					state_log.push_back(state);
-					hdot_log.push_back(control_input.h_dot);
-					hdot_bar_ref_log.push_back(control_input.hdot_bar_ref);
-					airspeed_log.push_back(control_input.airspeed-vbar_trim);
-					h_ref_log.push_back(href); //Remove offset when done testing
-					vbar_ref_log.push_back(vbar_ref);
-					hdot_ref_log.push_back(hdot_ref);
-					dTc_log.push_back(dT*_max_thrust-T_Trim);
-					publish_time_log.push_back(publish_time);
-					mp_pose_intra_log.push_back(moving_platform.mp_pose[1]);//Change based on direction of mp motion
-					mp_pose_alt_log.push_back(-moving_platform.mp_pose[2]);
-					fw_intra_log.push_back(control_input.posy);//Change based on direction landing
-				}
+				// if(state>0){
+				// 	x_log.push_back(_x_guide-L_track);
+				// 	z_log.push_back(-control_input.posz);//Remove offset when done testing
+				// 	state_log.push_back(state);
+				// 	hdot_log.push_back(control_input.h_dot);
+				// 	hdot_bar_ref_log.push_back(control_input.hdot_bar_ref);
+				// 	airspeed_log.push_back(control_input.airspeed-vbar_trim);
+				// 	h_ref_log.push_back(href); //Remove offset when done testing
+				// 	vbar_ref_log.push_back(vbar_ref);
+				// 	hdot_ref_log.push_back(hdot_ref);
+				// 	dTc_log.push_back(dT*_max_thrust-T_Trim);
+				// 	publish_time_log.push_back(publish_time);
+				// 	mp_pose_intra_log.push_back(moving_platform.mp_pose[1]);//Change based on direction of mp motion
+				// 	mp_pose_alt_log.push_back(-moving_platform.mp_pose[2]);
+				// 	fw_intra_log.push_back(control_input.posy);//Change based on direction landing
+				// }
 
-				if(Log_data==true){
-					myfile.open("/home/mohzap/Documents/PX4_python_logger/Landing_Procedure_Data.txt");
-					int sizex =x_log.size();
-					int sizez=z_log.size();
-					int sizestate=state_log.size();
-					int sizehdot=hdot_log.size();
-					for(int i=0;i<sizex;i++){
-						myfile<<x_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizez;i++){
-						myfile<<z_log[i]<<",";
-					}
-					myfile<<"\n";
-					myfile<<sizex;
-					myfile<<"\n";
-					myfile<<sizez;
-					myfile<<"\n";
-					myfile<<L_track;
-					myfile<<"\n";
-					for(int i=0;i<sizestate;i++){
-						myfile<<state_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<hdot_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<hdot_bar_ref_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<airspeed_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<h_ref_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<vbar_ref_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<hdot_ref_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<dTc_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<publish_time_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<mp_pose_intra_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<mp_pose_alt_log[i]<<",";
-					}
-					myfile<<"\n";
-					for(int i=0;i<sizehdot;i++){
-						myfile<<fw_intra_log[i]<<",";
-					}
-					myfile.close();
-					Log_data=false;
-					// Clear logging arrays incase they are reused
-					x_log.clear();z_log.clear();state_log.clear();hdot_log.clear();hdot_bar_ref_log.clear();airspeed_log.clear();
-					h_ref_log.clear();vbar_ref_log.clear();hdot_ref_log.clear();dTc_log.clear();publish_time_log.clear();
-				}
+				// if(Log_data==true){
+				// 	myfile.open("/home/mohzap/Documents/PX4_python_logger/Landing_Procedure_Data.txt");
+				// 	int sizex =x_log.size();
+				// 	int sizez=z_log.size();
+				// 	int sizestate=state_log.size();
+				// 	int sizehdot=hdot_log.size();
+				// 	for(int i=0;i<sizex;i++){
+				// 		myfile<<x_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizez;i++){
+				// 		myfile<<z_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	myfile<<sizex;
+				// 	myfile<<"\n";
+				// 	myfile<<sizez;
+				// 	myfile<<"\n";
+				// 	myfile<<L_track;
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizestate;i++){
+				// 		myfile<<state_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<hdot_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<hdot_bar_ref_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<airspeed_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<h_ref_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<vbar_ref_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<hdot_ref_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<dTc_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<publish_time_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<mp_pose_intra_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<mp_pose_alt_log[i]<<",";
+				// 	}
+				// 	myfile<<"\n";
+				// 	for(int i=0;i<sizehdot;i++){
+				// 		myfile<<fw_intra_log[i]<<",";
+				// 	}
+				// 	myfile.close();
+				// 	Log_data=false;
+				// 	// Clear logging arrays incase they are reused
+				// 	x_log.clear();z_log.clear();state_log.clear();hdot_log.clear();hdot_bar_ref_log.clear();airspeed_log.clear();
+				// 	h_ref_log.clear();vbar_ref_log.clear();hdot_ref_log.clear();dTc_log.clear();publish_time_log.clear();
+				// }
 
 
 
@@ -1554,8 +1600,9 @@ void Controllers::Run()
 		mcl_disp=false;
 		/*In Manual Mode*/
 		if(!manual_mode){
-			printf("!!!Manual Mode!!!\n");
-			printf("\n");
+			// printf("!!!Manual Mode!!!\n");
+			// printf("\n");
+			PX4_INFO("!!!Manual Mode!!!");
 			manual_count=0;
 		}
 		manual_mode=true;
@@ -1592,22 +1639,31 @@ void Controllers::Run()
 		dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 		dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 		dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-		dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+
 		}
 
 		}
 
 	}
 
-		/*Assign actuators*/
-		actuators.control[0]=dA_pub;actuators.control[1]=dE_pub;actuators.control[2]=dR_pub;actuators.control[3]=dT_pub;actuators.control[4]=dF_pub;
-
 		/*Testing Control Surface Deflection*/
-		dA_pub=20.0/180.0*M_PI;
-		dE_pub=20.0/180.0*M_PI;
-		dT_pub=0.0;
-		dR_pub=20.0/180.0*M_PI;
-		dF_pub=20.0/180.0*M_PI;
+		// dA_pub=-25.0/180.0*M_PI;
+		// dE_pub=10.0/180.0*M_PI;
+		// dT_pub=0.0;
+		// dR_pub=-20.0/180.0*M_PI;
+		// dF_pub=-22.5/180.0*M_PI;
+
+		// Compensating for controller direction change
+		// dA_pub=-dA_pub * (float) 2.223525;
+		// dE_pub=-dE_pub * (float)1.8193;//Scaller is for controller only
+		// dT_pub=dT_pub;
+		// dR_pub=-dR_pub * (float)1.60315;
+		// dF_pub=-dF_pub * (float) 2.5331025;
+
+
+		/*Assign actuators*/
 		actuators.control[0]=dA_pub;actuators.control[1]=dE_pub;actuators.control[2]=dR_pub;actuators.control[3]=dT_pub;actuators.control[4]=dF_pub;
 
 		/*set setpoint rates*/
@@ -1709,6 +1765,6 @@ fw_att_control is the fixed wing attitude controller.
  */
 int ex_fixedwing_actual_custom_control_main(int argc, char *argv[])
 {
-	printf("Running custom fixed wing controller\n");
+	// printf("Running custom fixed wing controller\n");
 	return Controllers::main(argc, argv);
 }

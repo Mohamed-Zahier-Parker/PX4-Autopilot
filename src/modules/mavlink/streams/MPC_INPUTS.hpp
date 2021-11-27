@@ -3,7 +3,7 @@
 #define MPC_INPUTS_HPP
 
 #include <uORB/topics/mpc_inputs.h>
-#include <iostream>
+// #include <iostream>
 
 class MavlinkStreamMPCInputs : public MavlinkStream
 {

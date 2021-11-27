@@ -96,10 +96,10 @@
 #include <uORB/topics/commander_state.h>
 
 //Graph plotting
-#include <iostream>
-#include <fstream>
+// #include <iostream>
+// #include <fstream>
 #include "cmath"
-#include <vector>
+// #include <vector>
 using namespace std;
 
 using uORB::SubscriptionData;
@@ -227,12 +227,13 @@ private:
 	float Tau_yaw=0,gamma=0,gamma_land=0,h_ref_SM=0,dg=0,dis_t=0;
 	int state=0;
 	//Graph Plotting
-	ofstream myfile;
-	std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log,h_ref_log,vbar_ref_log,hdot_ref_log,dTc_log,publish_time_log,mp_pose_intra_log,mp_pose_alt_log,fw_intra_log;
-	std::vector<int> state_log;
+	// ofstream myfile;
+	// std::vector<float> x_log,z_log,hdot_log,hdot_bar_ref_log,airspeed_log,h_ref_log,vbar_ref_log,hdot_ref_log,dTc_log,publish_time_log,mp_pose_intra_log,mp_pose_alt_log,fw_intra_log;
+	// std::vector<int> state_log;
 
 	// Moving platform
-	std::vector<float> TD_position={0.00,0.00,0.00};//Touch Down point
+	// std::vector<float> TD_position={0.00,0.00,0.00};//Touch Down point
+	float TD_position[3]={0.00,0.00,0.00};//Touch Down point
 
 	// MPC
 	int MPC_P=30;//choose
@@ -258,7 +259,8 @@ private:
 		(ParamFloat<px4::params::FW_MAN_Y_SC>) _param_fw_man_y_sc,
 		(ParamFloat<px4::params::TRIM_PITCH>) _param_trim_pitch,
 		(ParamFloat<px4::params::TRIM_ROLL>) _param_trim_roll,
-		(ParamFloat<px4::params::TRIM_YAW>) _param_trim_yaw
+		(ParamFloat<px4::params::TRIM_YAW>) _param_trim_yaw,
+		(ParamFloat<px4::params::FW_FLAPS_SCL>) _param_fw_flaps_scl
 	)
 
 

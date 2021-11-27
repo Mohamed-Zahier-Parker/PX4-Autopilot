@@ -77,7 +77,7 @@
 #include "vehicle_gps_position/VehicleGPSPosition.hpp"
 #include "vehicle_imu/VehicleIMU.hpp"
 #include "vehicle_magnetometer/VehicleMagnetometer.hpp"
-#include <iostream>
+// #include <iostream>
 
 using namespace sensors;
 using namespace time_literals;

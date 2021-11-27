@@ -2953,7 +2953,8 @@ MavlinkReceiver::handle_message_mpc_outputs(mavlink_message_t *msg)
 struct mpc_outputs_s outputs = {};
 
     outputs.timestamp = hrt_absolute_time();
-    std::copy(man.mpc_mv_out,man.mpc_mv_out+2,outputs.mpc_mv_out);
+//     std::copy(man.mpc_mv_out,man.mpc_mv_out+2,outputs.mpc_mv_out);
+    outputs.mpc_mv_out[0]=man.mpc_mv_out[0];outputs.mpc_mv_out[1]=man.mpc_mv_out[1];
 //     outputs.mpc_mv_out[0]=2.0;outputs.mpc_mv_out[1]=2.0;
     _mpc_outputs_pub.publish(outputs);
 //     if (_mpc_outputs_pub == nullptr) {
