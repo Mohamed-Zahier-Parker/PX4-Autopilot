@@ -1195,21 +1195,22 @@ void Controllers::Run()
 				vstatus_sub.copy(&vstatus);
 
 				/*Run State Machine*/
-				float SM_ref[4];
-				state_machine(control_input,SM_ref,moving_platform.mp_pose);
+				// float SM_ref[4];
+				// state_machine(control_input,SM_ref,moving_platform.mp_pose);
 
 				// Publish time
 				// float publish_time = hrt_absolute_time()*1e-6f;
 
 				/*Run Landing point algorithm*/
-				landing_point(control_input,moving_platform.mp_pose,moving_platform.mp_vel);
+				// landing_point(control_input,moving_platform.mp_pose,moving_platform.mp_vel);
 
 				//!!!TESTING!!!
 				// std::cout<<"Moving Platform posez : "<<moving_platform.mp_pose[2]<<"\n";
 
 
 				/*Run Controllers*/
-				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0,vbar_ref=0;
+				// float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0,vbar_ref=0;
+				float dA=0,dE=0,dF=0,dR=0,dT=0,vbar_ref=0;
 				if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
 				//if(1){
 					if(!controllers_activate){
@@ -1232,7 +1233,7 @@ void Controllers::Run()
 					controllers_activate=true;
 					manual_mode=false;
 
-					//Longitudanal Controllers
+				/*	//Longitudanal Controllers
 					href=SM_ref[0];//altitude (Make a way to trigger )
 					vbar_ref=SM_ref[1];
 
@@ -1365,8 +1366,13 @@ void Controllers::Run()
 					dR=LSA(control_input,Bw_ref,dt);
 					//Testing rudder command
 					// std::cout<<"Controllers dR : "<<dR<<"\n";
+				*/
 
-					disp_count_ctrl++;
+				//Auto Airspeed Control
+				dT=airspeed_controller(control_input,vbar_ref,dt);
+
+
+					// disp_count_ctrl++;
 				}
 
 
@@ -1376,7 +1382,7 @@ void Controllers::Run()
 				// Normalised between -1 and 1 for dA,dE and dR
 				// Normalesed between -1 and 1 on input but converts it to -3500 to 3500 on output.
 				//climb
-				if(control_input.posz>-75 && !controllers_activate){
+				if(control_input.posz>-7 && !controllers_activate){
 					// if((double)euler_angles.phi()<15*M_PI/180){
 					// 	dA=-0.015;
 					// }else{
@@ -1396,7 +1402,7 @@ void Controllers::Run()
 					//dT=((350.00)/3500.00);//temporary compensation
 				}
 
-				if(control_input.posz<-75 && !controllers_activate){
+				if(control_input.posz<-7 && !controllers_activate){
 					dA=0;
 					dR=0;
 					dF=0;
@@ -1440,7 +1446,7 @@ void Controllers::Run()
 				/* Compensating for phyical control surface deformation for PIXHAWK 4 CODE*/
 				dA=-dA * (float) 2.223525;
 				dE=-dE * (float)1.8193;// Scaler is for controller only
-				dT=dT;
+				// dT=dT;
 				dR=-dR * (float)1.60315;
 				dF=-dF * (float) 2.5331025;
 
@@ -1555,11 +1561,28 @@ void Controllers::Run()
 
 
 				/*Set variables for publishing*/
-				dA_pub=dA;
-				dE_pub=dE;
-				dR_pub=dR;
+				// dA_pub=dA;
+				// dE_pub=dE;
+				// dR_pub=dR;
+				// dT_pub=dT;
+				// dF_pub=dF;
+
+				dA_pub=0.0;
+				dE_pub=0.0;
+				dR_pub=0.0;
 				dT_pub=dT;
-				dF_pub=dF;
+				dF_pub=0.0;
+
+				manual_control_setpoint_s manual_control_setpoint;
+				if (manual_control_setpoint_sub.copy(&manual_control_setpoint))
+				{
+
+				dA_pub=manual_control_setpoint.y * _param_fw_man_r_sc.get() + _param_trim_roll.get();
+				dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
+				dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
+				// dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
+				dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+				}
 
 
 				publish_roll=control_input.phi;
@@ -1639,8 +1662,8 @@ void Controllers::Run()
 		dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 		dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 		dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-		// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
-		dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+		dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		// dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 
 		}
 
