@@ -1581,7 +1581,8 @@ void Controllers::Run()
 				dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 				dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 				// dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-				dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+				// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+				dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 				}
 
 
@@ -1655,15 +1656,16 @@ void Controllers::Run()
 			float c_dT=(math::constrain(manual_control_setpoint.z, 0.0f, 1.0f))-m_dR*25;
 			dT_pub=m_dT*manual_count+c_dT;
 			//dF
-			dF_pub=0;
+			// dF_pub=0;
+			dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 			manual_count++;
 		}else{
 		dA_pub=manual_control_setpoint.y * _param_fw_man_r_sc.get() + _param_trim_roll.get();
 		dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 		dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 		dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-		dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
-		// dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+		// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 
 		}
 
