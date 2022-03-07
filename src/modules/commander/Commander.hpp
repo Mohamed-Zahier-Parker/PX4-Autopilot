@@ -88,6 +88,9 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vtol_vehicle_status.h>
 
+#include <uORB/topics/fw_custom_control_testing.h>
+#include <stdlib.h>
+
 using math::constrain;
 using systemlib::Hysteresis;
 
@@ -439,6 +442,8 @@ private:
 	uORB::PublicationData<home_position_s>			_home_pub{ORB_ID(home_position)};
 
 	uORB::Publication<vehicle_command_ack_s>		_command_ack_pub{ORB_ID(vehicle_command_ack)};
+
+	uORB::Publication<fw_custom_control_testing_s> _fw_custom_control_testing_pub{ORB_ID(fw_custom_control_testing)};
 
 	orb_advert_t _mavlink_log_pub{nullptr};
 };

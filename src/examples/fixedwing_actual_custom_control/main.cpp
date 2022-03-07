@@ -84,6 +84,8 @@
 #include <uORB/topics/estimator_status.h>
 #include <uORB/topics/airspeed_validated.h>
 
+// #include <iomanip>
+
 /*
 #include <px4_platform_common/px4_config.h>
 #include <px4_platform_common/defines.h>
@@ -389,33 +391,33 @@ void Controllers::init_ECL_variables(){
 	K_P_RAC=0.03679;//roll angle controller proportional control gain
 	K_I_RAC=0.0147;//roll angle controller intergrator control gain
 	K_psi=1.25;//heading controller gain
-	K_y=0.02;//guidance controller gain
+	K_y=0.017;//guidance 2 controller gain
 	vbar_trim=18;//trim airspeed
-	alpha_trim=0.0563;//trim angle of attack(and pitch)
-	T_Trim=6.6102;
-	dE_Trim=-0.0767;
-	Ki_AS=3.0011;
-	Kp_AS=8.7802;
-	Ki_f=-0.1252;
-	Nc=0.0108;
-	Ki_e=0.0727;
-	Kc=0.0032;
-	Kq=-0.0876;
-	Km=0.1213;
-	Ki_CR=1.0130;//Original CR gain
-	Kp_CR=2.4960;//Original CR gain
-	Kp_alt=0.7500;
-	Ki_LSA=-0.2623;
-	K_r=-0.3114;
-	K_B=-0.0606;
-	Ki_RR=-0.5245;
-	Kp_RR=-0.0644;
-	Kp_RA=1.3566;
-	Kp_G=0.0150;
-	Kd_G=0.0610;
+	alpha_trim=0.0479;//trim angle of attack(and pitch)
+	T_Trim=6.3355;
+	dE_Trim=-0.0695;
+	Ki_AS=2.8871;//airspeed controller gain
+	Kp_AS=8.7660;//airspeed controller gain
+	Ki_f=-0.1588;//NSADLC gain
+	Nc=0.0099;//NSADLC gain
+	Ki_e=0.0685;//NSADLC gain
+	Kc=0.0026;//NSADLC gain
+	Kq=-0.0775;//NSADLC gain
+	Km=0.1213;//NSADLC gain
+	Ki_CR=1.1;//Climb Rate gain
+	Kp_CR=3.5;//Climb Rate gain
+	Kp_alt=0.80;//altitude controller gain
+	Ki_LSA=-0.2504;//LSA controller gain
+	K_r=-0.3208;//LSA controller gain
+	K_B=-0.0615;//LSA controller gain
+	Ki_RR=-0.7783;//Roll Rate gain
+	Kp_RR=-0.06444;//Roll Rate gain
+	Kp_RA=1.5;//Roll Angle gain
+	Kp_G=0.0170;//Guidance 1 controller gain
+	Kd_G=0.0650;//Guidance 1 controller gain
 	_intergrator_yaw=0;
-	Ki_yaw=-1.4971;
-	Kp_yaw=-0.8858;
+	Ki_yaw=-1.606;//Yaw/sideslip(beta) controller
+	Kp_yaw=-0.95;//Yaw/sideslip(beta) controller
 	_intergrator_AS=0;
 	_intergrator_DLC=0;
 	_intergrator_NSA=0;
@@ -428,23 +430,32 @@ void Controllers::init_ECL_variables(){
 	_max_deflection=1.00;
 	//state machine variables
 	Land=true;
-	Tau_yaw=4;
+	Tau_yaw=2.12;
 	gamma=(float)(4*M_PI/180);
 	gamma_land=(float)(2*M_PI/180);
 	// dg=250;
 	// dis_t=75;
-	dg=500;
-	dis_t=100.0;
-	Ki_alt_lim=0.6;
-	_intergrator_alt_lim=0;
-	_min_alt_lim=-2;
-	_max_alt_lim=2;
+	dg=250;
+	dis_t=71.5;
+	Ki_alt_lim_mpc=0.6;
+	Ki_alt_lim_normal=0.05;
+	_intergrator_alt_lim_mpc=0;
+	_intergrator_alt_lim_normal=0;
+	_min_alt_lim_mpc=-2.0;
+	_max_alt_lim_mpc=2.0;
+	_min_alt_lim_normal=-0.1;
+	_max_alt_lim_normal=0.1;
 	FW_UAV_ideal_vel_I_land=18.0;
+	waypoint_early_switching_point = 75.0;
+	_intergrator_guid1_lim=0;
+	Ki_y_lim = 0.002;
+	_min_guid1_lim = -4.0*M_PI/180.0;
+	_max_guid1_lim = 4.0*M_PI/180.0;
 }
 
 void Controllers::initialise_NSADLC_HPF()
 {
-	float f_cut=9.5;//1/T_c from MATLAB code !!!CHECK!!!
+	float f_cut=9.8;//1/T_c from MATLAB code !!!CHECK!!!
 	NSADLC_HPF.setfCut(f_cut);
 	NSADLC_HPF.setY(0);
 	NSADLC_HPF.setU(0);
@@ -458,14 +469,30 @@ float Controllers::airspeed_controller(const Control_Data &state_data,float vbar
 	// return dT;
 
 	//Anti-Windup
-	float Ta=1,Ti=1;
-	float edot_a_antwind=edot_a*1/Ti+-1/Ta*(dT_AS_lim-dT_AS);//added -1 to Ta loop as the error is state-ref not ref-state
-	_intergrator_AS = _intergrator_AS + edot_a_antwind*dt;
+	// float Ta=1,Ti=1;
+	// float edot_a_antwind=edot_a*1/Ti+-1/Ta*(dT_AS_lim-dT_AS);//added -1 to Ta loop as the error is state-ref not ref-state
+	// _intergrator_AS = _intergrator_AS + edot_a_antwind*dt;
+	// float dT = -Ki_AS*_intergrator_AS - Kp_AS*edot_a;
+	// dT_AS=dT+T_Trim;//Add trim thrust
+	// // std::cout<<"dT_AS : "<<dT_AS<<"\n";
+	// dT_AS_lim=math::constrain(dT_AS,_min_thrust,_max_thrust);
+	// return dT_AS_lim;
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_AS + edot_a*dt)*-Ki_AS >= (_max_thrust-T_Trim)){
+		_intergrator_AS = (_max_thrust-T_Trim)/-Ki_AS;
+	}else if((_intergrator_AS + edot_a*dt)*-Ki_AS <= (_min_thrust-T_Trim)){
+		_intergrator_AS = (_min_thrust-T_Trim)/-Ki_AS;
+	}else{
+		_intergrator_AS = _intergrator_AS + edot_a*dt;
+	}
+
 	float dT = -Ki_AS*_intergrator_AS - Kp_AS*edot_a;
 	dT_AS=dT+T_Trim;//Add trim thrust
 	// std::cout<<"dT_AS : "<<dT_AS<<"\n";
 	dT_AS_lim=math::constrain(dT_AS,_min_thrust,_max_thrust);
 	return dT_AS_lim;
+
 }
 
 void Controllers::NSADLC_controller(const Control_Data &state_data,float Cw_ref,const float dt,float *defl)
@@ -475,10 +502,22 @@ void Controllers::NSADLC_controller(const Control_Data &state_data,float Cw_ref,
 	float edot_f=NSADLC_HPF.update(ew);
 	// _intergrator_DLC = _intergrator_DLC + edot_f*dt;
 	// float df = -Ki_f*_intergrator_DLC;
+
 	//Anti-Windup
-	float Ta_DLC=1,Ti_DLC=1;
-	float edot_f_antwind=edot_f*1/Ti_DLC-1/Ta_DLC*(dF_DLC_lim-dF_DLC);
-	_intergrator_DLC = _intergrator_DLC + edot_f_antwind*dt;
+	// float Ta_DLC=1,Ti_DLC=1;
+	// float edot_f_antwind=edot_f*1/Ti_DLC-1/Ta_DLC*(dF_DLC_lim-dF_DLC);
+	// _intergrator_DLC = _intergrator_DLC + edot_f_antwind*dt;
+	// dF_DLC = -Ki_f*_intergrator_DLC;
+	// dF_DLC_lim=math::constrain(dF_DLC,_min_deflection,_max_deflection);
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_DLC + edot_f*dt)*-Ki_f >= (_max_deflection)){
+		_intergrator_DLC = (_max_deflection)/-Ki_f;
+	}else if((_intergrator_DLC + edot_f*dt)*-Ki_f <= (_min_deflection)){
+		_intergrator_DLC = (_min_deflection)/-Ki_f;
+	}else{
+		_intergrator_DLC = _intergrator_DLC + edot_f*dt;
+	}
 	dF_DLC = -Ki_f*_intergrator_DLC;
 	dF_DLC_lim=math::constrain(dF_DLC,_min_deflection,_max_deflection);
 
@@ -486,14 +525,27 @@ void Controllers::NSADLC_controller(const Control_Data &state_data,float Cw_ref,
 	float edot_c=-Cw_ref+state_data.Cw;
 	// _intergrator_NSA=_intergrator_NSA+edot_c*dt;
 	// float de = Cw_ref*Nc - _intergrator_NSA * Ki_e - state_data.Cw * Kc - state_data.q * Kq + Km * df;
+
 	//Anti-windup
-	float Ta_NSA=1,Ti_NSA=1;
-	float edot_c_antwind=edot_c*1/Ti_NSA-1/Ta_NSA*(dE_NSA_lim-dE_NSA);
-	_intergrator_NSA=_intergrator_NSA+edot_c_antwind*dt;
+	// float Ta_NSA=1,Ti_NSA=1;
+	// float edot_c_antwind=edot_c*1/Ti_NSA-1/Ta_NSA*(dE_NSA_lim-dE_NSA);
+	// _intergrator_NSA=_intergrator_NSA+edot_c_antwind*dt;
+	// float de = Cw_ref*Nc - _intergrator_NSA * Ki_e - state_data.Cw * Kc - state_data.q * Kq + Km * dF_DLC_lim;
+	// dE_NSA=de+dE_Trim;//Add trim elevator
+	// dE_NSA_lim=math::constrain(dE_NSA,_min_deflection,_max_deflection);
+
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_NSA + edot_c*dt)*-Ki_e >= (_max_deflection-dE_Trim)){
+		_intergrator_NSA = (_max_deflection-dE_Trim)/-Ki_e;
+	}else if((_intergrator_NSA + edot_c*dt)*-Ki_e <= (_min_deflection-dE_Trim)){
+		_intergrator_NSA = (_min_deflection-dE_Trim)/-Ki_e;
+	}else{
+		_intergrator_NSA = _intergrator_NSA + edot_c*dt;
+	}
 	float de = Cw_ref*Nc - _intergrator_NSA * Ki_e - state_data.Cw * Kc - state_data.q * Kq + Km * dF_DLC_lim;
 	dE_NSA=de+dE_Trim;//Add trim elevator
 	dE_NSA_lim=math::constrain(dE_NSA,_min_deflection,_max_deflection);
-
 
 	//copy to defl array
 	// *defl=de;
@@ -518,16 +570,53 @@ float Controllers::altitude_controller(const Control_Data &state_data,float h_re
 	return hdot_ref;
 }
 
-float Controllers::altitude_limit_intergrator(const Control_Data &state_data,float h_ref,const float dt)
+float Controllers::altitude_limit_intergrator_mpc(const Control_Data &state_data,float h_ref,const float dt)
 {
-	//Anti-windup
-	float Ti=1,Ta=1;
 	float herr=(-1*state_data.posz-h_ref);
-	float herr_ant_wind=1/Ti*herr+1/Ta*(hdot_ref_int_lim-hdot_ref_int);
-	_intergrator_alt_lim=_intergrator_alt_lim+herr_ant_wind*dt;
-	hdot_ref_int=Ki_alt_lim*_intergrator_alt_lim; //!!!Check posz positive direction!!!
-	hdot_ref_int_lim=math::constrain(hdot_ref_int,_min_alt_lim,_max_alt_lim);
-	return hdot_ref_int_lim;
+	//Anti-windup
+	// float Ti=1,Ta=1;
+	// float herr_ant_wind=1/Ti*herr+1/Ta*(hdot_ref_int_lim_mpc-hdot_ref_int_mpc);
+	// _intergrator_alt_lim_mpc=_intergrator_alt_lim_mpc+herr_ant_wind*dt;
+	// hdot_ref_int_mpc=Ki_alt_lim_mpc*_intergrator_alt_lim_mpc; //!!!Check posz positive direction!!!
+	// hdot_ref_int_lim_mpc=math::constrain(hdot_ref_int_mpc,_min_alt_lim_mpc,_max_alt_lim_mpc);
+	// return hdot_ref_int_lim_mpc;
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_alt_lim_mpc + herr*dt)*-Ki_alt_lim_mpc >= (_max_alt_lim_mpc)){
+		_intergrator_alt_lim_mpc = (_max_alt_lim_mpc)/-Ki_alt_lim_mpc;
+	}else if((_intergrator_alt_lim_mpc + herr*dt)*-Ki_alt_lim_mpc <= (_min_alt_lim_mpc)){
+		_intergrator_alt_lim_mpc = (_min_alt_lim_mpc)/-Ki_alt_lim_mpc;
+	}else{
+		_intergrator_alt_lim_mpc = _intergrator_alt_lim_mpc + herr*dt;
+	}
+	hdot_ref_int_mpc=-Ki_alt_lim_mpc*_intergrator_alt_lim_mpc; //!!!Check posz positive direction!!!
+	hdot_ref_int_lim_mpc=math::constrain(hdot_ref_int_mpc,_min_alt_lim_mpc,_max_alt_lim_mpc);
+	return -hdot_ref_int_lim_mpc;
+
+}
+
+float Controllers::altitude_limit_intergrator_normal(const Control_Data &state_data,float h_ref,const float dt)
+{
+	float herr=(-1*state_data.posz-h_ref);
+	//Anti-windup
+	// float Ti=1,Ta=1;
+	// float herr_ant_wind=1/Ti*herr+1/Ta*(hdot_ref_int_lim_normal-hdot_ref_int_normal);
+	// _intergrator_alt_lim_normal=_intergrator_alt_lim_normal+herr_ant_wind*dt;
+	// hdot_ref_int_normal=Ki_alt_lim_normal*_intergrator_alt_lim_normal; //!!!Check posz positive direction!!!
+	// hdot_ref_int_lim_normal=math::constrain(hdot_ref_int_normal,_min_alt_lim_normal,_max_alt_lim_normal);
+	// return hdot_ref_int_lim_normal;
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_alt_lim_normal + herr*dt)*-Ki_alt_lim_normal >= (_max_alt_lim_normal)){
+		_intergrator_alt_lim_normal = (_max_alt_lim_normal)/-Ki_alt_lim_normal;
+	}else if((_intergrator_alt_lim_normal + herr*dt)*-Ki_alt_lim_normal <= (_min_alt_lim_normal)){
+		_intergrator_alt_lim_normal = (_min_alt_lim_normal)/-Ki_alt_lim_normal;
+	}else{
+		_intergrator_alt_lim_normal = _intergrator_alt_lim_normal + herr*dt;
+	}
+	hdot_ref_int_normal=-Ki_alt_lim_normal*_intergrator_alt_lim_normal; //!!!Check posz positive direction!!!
+	hdot_ref_int_lim_normal=math::constrain(hdot_ref_int_normal,_min_alt_lim_normal,_max_alt_lim_normal);
+	return -hdot_ref_int_lim_normal;
 }
 
 float Controllers::LSA(const Control_Data &state_data,float Bw_ref,const float dt)
@@ -539,9 +628,23 @@ float Controllers::LSA(const Control_Data &state_data,float Bw_ref,const float d
 	// return dr;
 
 	//Anti-windup
-	float Ti=1,Ta=1;
-	float edot_b_ant_wind=1/Ti*edot_b-1/Ta*(dR_LSA_lim-dR_LSA);
-	_intergrator_LSA=_intergrator_LSA+edot_b_ant_wind*dt;
+	// float Ti=1,Ta=1;
+	// float edot_b_ant_wind=1/Ti*edot_b-1/Ta*(dR_LSA_lim-dR_LSA);
+	// _intergrator_LSA=_intergrator_LSA+edot_b_ant_wind*dt;
+	// float dr_r=-Ki_LSA*_intergrator_LSA;
+	// float dr=dr_r-state_data.Bw*K_B-state_data.r*K_r;
+	// dR_LSA=dr;
+	// dR_LSA_lim=math::constrain(dR_LSA,_min_deflection,_max_deflection);
+	// return dR_LSA_lim;
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_LSA + edot_b*dt)*-Ki_LSA >= (_max_deflection)){
+		_intergrator_LSA = (_max_deflection)/-Ki_LSA;
+	}else if((_intergrator_LSA + edot_b*dt)*-Ki_LSA <= (_min_deflection)){
+		_intergrator_LSA = (_min_deflection)/-Ki_LSA;
+	}else{
+		_intergrator_LSA = _intergrator_LSA + edot_b*dt;
+	}
 	float dr_r=-Ki_LSA*_intergrator_LSA;
 	float dr=dr_r-state_data.Bw*K_B-state_data.r*K_r;
 	dR_LSA=dr;
@@ -557,13 +660,26 @@ float Controllers::roll_rate_controller(const Control_Data &state_data,float p_r
 	// return da;
 
 	//Anti-windup
-	float Ti=1,Ta=1;
-	float edot_p_ant_wind=edot_p*1/Ti-1/Ta*(dA_RR_lim-dA_RR);
-	_intergrator_RR=_intergrator_RR+edot_p_ant_wind*dt;
+	// float Ti=1,Ta=1;
+	// float edot_p_ant_wind=edot_p*1/Ti-1/Ta*(dA_RR_lim-dA_RR);
+	// _intergrator_RR=_intergrator_RR+edot_p_ant_wind*dt;
+	// float da=-_intergrator_RR*Ki_RR-edot_p*Kp_RR;
+	// dA_RR=da;
+	// dA_RR_lim=math::constrain(dA_RR,_min_deflection,_max_deflection);
+	// return dA_RR_lim;
+
+	if((_intergrator_RR + edot_p*dt)*-Ki_RR >= (_max_deflection)){
+		_intergrator_RR = (_max_deflection)/-Ki_RR;
+	}else if((_intergrator_RR + edot_p*dt)*-Ki_RR <= (_min_deflection)){
+		_intergrator_RR = (_min_deflection)/-Ki_RR;
+	}else{
+		_intergrator_RR = _intergrator_RR + edot_p*dt;
+	}
 	float da=-_intergrator_RR*Ki_RR-edot_p*Kp_RR;
 	dA_RR=da;
 	dA_RR_lim=math::constrain(dA_RR,_min_deflection,_max_deflection);
 	return dA_RR_lim;
+
 }
 
 float Controllers::roll_angle_controller(const Control_Data &state_data,float phi_ref,const float dt)
@@ -577,6 +693,30 @@ float Controllers::guidance_controller_1(const Control_Data &state_data,float ph
 	float phi_ref=phibar_ref-Kp_G*(state_data.y-y_ref)-state_data.ydot*Kd_G;
 	return phi_ref;
 }
+
+float Controllers::guidance_1_limited_intergrator(const Control_Data &state_data,float y_ref,const float dt)
+{
+	float yerr=(state_data.y-y_ref);
+	//Anti-windup
+	// float Ti=100.0,Ta=0.01;
+	// float yerr_ant_wind=(float)1.0/Ti*yerr+(float)1.0/Ta*(ydot_ref_int_lim-ydot_ref_int);
+	// _intergrator_guid1_lim=_intergrator_guid1_lim+yerr_ant_wind*dt;
+	// ydot_ref_int=Ki_y_lim*_intergrator_guid1_lim; //!!!Check posz positive direction!!!
+	// ydot_ref_int_lim=math::constrain(ydot_ref_int,_min_guid1_lim,_max_guid1_lim);
+	// return ydot_ref_int_lim;
+
+	if((_intergrator_guid1_lim + yerr*dt)*-Ki_y_lim >= (_max_guid1_lim)){
+		_intergrator_guid1_lim = (_max_guid1_lim)/-Ki_y_lim;
+	}else if((_intergrator_guid1_lim + yerr*dt)*-Ki_y_lim <= (_min_guid1_lim)){
+		_intergrator_guid1_lim = (_min_guid1_lim)/-Ki_y_lim;
+	}else{
+		_intergrator_guid1_lim = _intergrator_guid1_lim + yerr*dt;
+	}
+	ydot_ref_int=-Ki_y_lim*_intergrator_guid1_lim; //!!!Check posz positive direction!!!
+	ydot_ref_int_lim=math::constrain(ydot_ref_int,_min_guid1_lim,_max_guid1_lim);
+	return -ydot_ref_int_lim;
+}
+
 
 float Controllers::yaw_controller(const Control_Data &state_data,float psi_ref,const float dt)
 {
@@ -646,23 +786,20 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
        		_loc_guide=1;
 		_x_guide=0;
        		waypoint_END=false;
-		// std::cout<<"Abort\n";
 		PX4_INFO("Abort");
-
 	}
 	L_track=sqrt(pow((Destinations[_loc_guide][1]-Destinations[_loc_guide-1][1]),2)+pow((Destinations[_loc_guide][0]-Destinations[_loc_guide-1][0]),2));//Track length
-	if(_x_guide>L_track && _loc_guide!=Destination_size){
+	if(_x_guide>(L_track-waypoint_early_switching_point) && _loc_guide!=Destination_size){
         	if(_loc_guide!=(Destination_size-1))//If not final destination then update waypoints
 		{
 	    	// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//copy starting point coordinates into out array
 		out[0][0]=Destinations[_loc_guide][0];out[0][1]=Destinations[_loc_guide][1];
 		// std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//copy destination point coordinates into out array
             	out[1][0]=Destinations[_loc_guide+1][0];out[1][1]=Destinations[_loc_guide+1][1];
-		_loc_guide=_loc_guide+1;
+            	_loc_guide=_loc_guide+1;
 		}else
 		{
 		waypoint_END=true;//End waypoint navigation
-		// std::cout<<"waypoint_END\n";
 		PX4_INFO("waypoint_END");
 		// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//Update last starting point
 		out[0][0]=Destinations[_loc_guide][0];out[0][1]=Destinations[_loc_guide][1];
@@ -673,7 +810,7 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
         	}
     	}else
     	{ //Did not reach destination point yet
-       	// std::copy(&Destinations[_loc_guide-1][0],&Destinations[_loc_guide-1][0]+1*2,&out[0][0]);//keep start point the same
+      	// std::copy(&Destinations[_loc_guide-1][0],&Destinations[_loc_guide-1][0]+1*2,&out[0][0]);//keep start point the same
 	out[0][0]=Destinations[_loc_guide-1][0];out[0][1]=Destinations[_loc_guide-1][1];
 	// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[1][0]);//keep destination the same
 	out[1][0]=Destinations[_loc_guide][0];out[1][1]=Destinations[_loc_guide][1];
@@ -738,7 +875,9 @@ void Controllers::reset_integrators()
 	_intergrator_LSA=0;
 	_intergrator_RR=0;
 	_intergrator_yaw=0;
-	_intergrator_alt_lim=0;
+	_intergrator_alt_lim_mpc=0;
+	_intergrator_alt_lim_normal=0;
+	_intergrator_guid1_lim=0;
 }
 
 void Controllers::initialise_integrators(const Control_Data &state_data)
@@ -758,14 +897,16 @@ void Controllers::initialise_integrators(const Control_Data &state_data)
 	//Assume p_ref=0
 	p_ref=0;//Testing
 	_intergrator_RR=1/Ki_RR*(-Kp_RR*(state_data.p-p_ref)-dA_pub);// !!!Check if p_ref=0 is a valid assumption!!!
-	_intergrator_alt_lim=0;
+	_intergrator_alt_lim_mpc=0;
+	_intergrator_alt_lim_normal=0;
+	_intergrator_guid1_lim=0;
 
 }
 
-void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3]){
+void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3],const float dt){
 	float V_ground=sqrt(pow(state_data.velx_I,2)+pow(state_data.vely_I,2)+pow(state_data.velz_I,2));
 	//flare calculation
-	float dd=V_ground*Tau_yaw;  //distance of state changes
+	float dd=V_ground_check*Tau_yaw;  //distance of state changes
 	float h_land=0.0;//Flare height
 	float d_flare=h_land/(float)tan(gamma_land);
 
@@ -773,26 +914,24 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
         	if(Land==true){//Decision 1
             		if(state==0){
                 	state=1;//final approach
-			// std::cout<<"state 1\n";
-			// printf("state 1\n");
 			PX4_INFO("state 1");
             		}
 		}else{
            		Abort=true;
            		state=0;
 			Log_data=true;
+			PX4_INFO("Land Flag is Disabled");
 		}
         	if((L_track-_x_guide-d_flare)<dg && (L_track-_x_guide-d_flare)>=dis_t){
             		if(state==1){
                 		if(abs(h_ref_SM-(-state_data.posz))<1){//Decision 2
                     			state=2;//Glideslope tracking
-					// std::cout<<"state 2\n";
-					// printf("state 2\n");
 					PX4_INFO("state 2");
 			    	}else{
                     			Abort=true;
                     			state=0;
 					Log_data=true;
+					PX4_INFO("state 2 check failed");
                 		}
             		}
 		}
@@ -816,26 +955,25 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				PX4_INFO("herr :  \t%.2f",(double)abs((float)h_ref_SM-(-(float)state_data.posz)));
                 		if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && state_data.h_dot>(float)-1.50 && abs(state_data.beta)<(float)(5.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
                     			state=3;//Pre-landing
-					// std::cout<<"state 3\n";
 					PX4_INFO("state 3");
+					V_ground_check=V_ground;
 				}else{
                     			Abort=true;
                     			state=0;
 					Log_data=true;
+					PX4_INFO("state 3 check failed");
                 		}
             		}
 		}
         	if((L_track-_x_guide-d_flare)<=dd){
             		if(state==3){
                 		state=4;//decrab (cannot abort)
-				// std::cout<<"state 4\n";
 				PX4_INFO("state 4");
             		}
 	    	}
 		if((L_track-_x_guide)<=d_flare && d_flare>0){
             		if(state==4){
                 		state=5;//flare (cannot abort)
-				// std::cout<<"state 5\n";
 				PX4_INFO("state 5");
             		}
 	    	}
@@ -843,7 +981,6 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 			if(state==5 || state!=6){
             			state=6;//Landed
             			END=true;
-				// std::cout<<"state 6\n";
 				PX4_INFO("state 6");
 				Log_data=true;
 				// Display if hit target or not and miss distance
@@ -872,30 +1009,30 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 	}
     	switch(state){
         	case 0 : // Waypoint state
-            		ref_out[0]=(float)34.96+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(float)17.4817+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;//conventional flying
 	    		//ref_out order: h_ref, vbar_ref, y_ref, yaw_ref
 			break;
         	case 1 : //Final Approach
-            		ref_out[0]=(float)34.96+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(float)17.4817+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 2 : //Glideslope Tracking
-            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)-(V_ground*(float)cos(gamma)*dt*(float)tan(gamma))+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 3 : //Pre-Landing
-            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)-(V_ground*(float)cos(gamma)*dt*(float)tan(gamma))+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=false;
 			break;
         	case 4 : //Decrab
             		Anti_Abort=true;
-            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide-d_flare)*(float)tan(gamma)-(V_ground*(float)cos(gamma)*dt*(float)tan(gamma))+h_land+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
 		case 5 : //Flare
             		Anti_Abort=true;
-            		ref_out[0]=(L_track-_x_guide)*(float)tan(gamma_land)+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
+            		ref_out[0]=(L_track-_x_guide)*(float)tan(gamma_land)-(V_ground*(float)cos(gamma_land)*dt*(float)tan(gamma_land))+(-TD_position[2]);ref_out[1]=0;ref_out[2]=0;ref_out[3]=0;
 			yaw_ctrl=true;
 			break;
         	case 6 : //Landed
@@ -963,7 +1100,7 @@ void Controllers::mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[
 			// }else{
 			// 	mpc_ref[i]=v_ref;
 			// }
-			mpc_ref[i*2]=h_ref+(i)*(float)tan(-gamma)*(float)MPC_Ts;
+			mpc_ref[i*2]=h_ref+(i)*(float)tan(-gamma)*MPC_Ts; //!!! FIX: ADD vehicle ground velocity component!!!
 			mpc_ref[i*2+1]=v_ref;
 		}else{
 			// if(i<MPC_P){
@@ -1042,7 +1179,7 @@ void Controllers::Run()
 
 	// if(_vcontrol_mode.flag_control_position_enabled || _vcontrol_mode.flag_control_offboard_enabled){ //FIX CONTROL MODE
 
-	if(!_vcontrol_mode.flag_control_manual_enabled || (com_state.main_state == com_state.MAIN_STATE_POSCTL || com_state.main_state == com_state.MAIN_STATE_OFFBOARD)){ //FIX CONTROL MODE
+	if(!_vcontrol_mode.flag_control_manual_enabled || (com_state.main_state == com_state.MAIN_STATE_POSCTL || com_state.main_state == com_state.MAIN_STATE_OFFBOARD || com_state.main_state == com_state.MAIN_STATE_ALTCTL || com_state.main_state == com_state.MAIN_STATE_ACRO)){ //FIX CONTROL MODE
 
 	if(!_vcontrol_mode.flag_control_manual_enabled && !mcl_disp){
 		// std::cout<<"Manual Control Signal Lost\n";
@@ -1078,6 +1215,7 @@ void Controllers::Run()
 
 		/*calculate rotation matix(DCM) and euler angles(CHECK IF CORRECT AS IT IS DIRECTLY FROM FixedwingAttitudeControl.cpp)*/
 		matrix::Dcmf R = matrix::Quatf(att.q);
+		matrix::Dcmf DCM =R.transpose();
 		const matrix::Eulerf euler_angles(R);
 
 		/*get local copy of estimator states*/
@@ -1112,27 +1250,62 @@ void Controllers::Run()
 		mpc_outputs_s mpc_out{};
 		mpc_out_sub.copy(&mpc_out);
 
-		/*Get windspeed value*/
-		// wind_estimate_s wind{};
-		// wind_sub.copy(&wind);
+		// Setup Home Postion Manually
+		vehicle_status_s vstatus{};
+		vstatus_sub.copy(&vstatus);
 
-		// TESTING
-		// if(disp_count%100==0){
-		// 	std::cout<<"MPC_mv_0 : "<<mpc_out.mpc_mv_out[0]<<" MPC_mv_1 : "<<mpc_out.mpc_mv_out[1]<<"\n";
+		fw_custom_control_testing_s fw_custom_control_testing_setpoints{};
+		_fw_custom_control_testing_sub.copy(&fw_custom_control_testing_setpoints);
+
+		// if(!Home_Pose_set){
+		// 	vehicle_command_s veh_com{};
+		// 	veh_com.command = (uint16_t) 179; //VEHICLE_CMD_DO_SET_HOME
+		// 	veh_com.target_system = vstatus.system_id;
+		// 	veh_com.target_component = vstatus.component_id;
+		// 	veh_com.param1 = (float) 0.0;
+		// 	veh_com.param5 = (double) -34.0473810;
+		// 	veh_com.param6 = (double) 18.7405320;
+		// 	veh_com.param7 = (float) 10.3 +0.1722f;
+		// 	vehicle_command_pub.publish(veh_com);
+		// 	Home_Pose_set=true;
+		// 	PX4_INFO("Set Manual Home Postion");
 		// }
+
+		// if(!EKF_Origin_set){
+		// 	vehicle_command_s veh_com{};
+		// 	veh_com.command = (uint16_t) 100000; //VEHICLE_CMD_DO_SET_HOME
+		// 	veh_com.target_system = vstatus.system_id;
+		// 	veh_com.target_component = vstatus.component_id;
+		// 	// veh_com.param1 = (float) 0.0;
+		// 	veh_com.param5 = (double) -34.0473810;
+		// 	veh_com.param6 = (double) 18.7405320;
+		// 	veh_com.param7 = (float) 10.3 +0.1718f;
+		// 	vehicle_command_pub.publish(veh_com);
+		// 	EKF_Origin_set=true;
+		// }
+
 
 
 		/*get alpha and beta*/
 		//get body velocity
 		// const matrix::Vector3f vel_inertia=matrix::Vector3f(estim.states[4],estim.states[5],estim.states[6]);
 		const matrix::Vector3f vel_inertia=matrix::Vector3f(local_position.vx,local_position.vy,local_position.vz);
-		const matrix::Vector3f vel_b=R.operator*(vel_inertia);
+		const matrix::Vector3f vel_b=DCM.operator*(vel_inertia);
 
 
 		//work out polar coordinates
 		float vbar=sqrt(pow(vel_b(0),2)+pow(vel_b(1),2)+pow(vel_b(2),2));
 		float alpha=atan2(vel_b(2),vel_b(0));
 		float beta=asin(vel_b(1)/vbar);
+
+		// Workout offset between local postion referance point and home set point
+		// home_position_s home_pose{};
+		// home_position_sub.copy(&home_pose);
+		// struct map_projection_reference_s ref_pos;
+		// map_projection_init(&ref_pos, home_pose.lat, home_pose.lon);
+		// float x_loc_ref_diff, y_loc_ref_diff;
+		// map_projection_project(&ref_pos, local_position.ref_lat, local_position.ref_lon, &x_loc_ref_diff, &y_loc_ref_diff);
+		// float z_loc_ref_diff = -(local_position.ref_alt-home_pose.alt);
 
 		/*Define Control Data*/
 		Control_Data control_input{};
@@ -1153,6 +1326,9 @@ void Controllers::Run()
 		control_input.posx=local_position.x;
 		control_input.posy=local_position.y;
 		control_input.posz=local_position.z;
+		// control_input.posx=local_position.x - (-x_loc_ref_diff); //compensate for local position referance point difference with home point
+		// control_input.posy=local_position.y - (-y_loc_ref_diff);
+		// control_input.posz=local_position.z - (-z_loc_ref_diff);
 		// control_input.h_dot=-estim.states[6];
 		control_input.h_dot=-local_position.vz;
 		control_input.Bw=accel.xyz[1];//!!!check!!!
@@ -1171,14 +1347,14 @@ void Controllers::Run()
 		// printf("Controllers Psi :    %f\n",(double)control_input.psi*180/M_PI);
 		// printf("\n");
 
-		if(disp_count%1==0 && state!=6){
+		// if(disp_count%1==0 && state!=6){
 			// std::cout<<"fw_px4_x : "<<control_input.posx<<" fw_px4_y : "<<control_input.posy<<" fw_px4_z : "<<-control_input.posz<<"\n";
 			// std::cout<<"Moving Platform posex : "<<moving_platform.mp_pose[0]<<" Moving Platform posey : "<<moving_platform.mp_pose[1]<<" Moving Platform posez : "<<-moving_platform.mp_pose[2]<<"\n";
 			// std::cout<<"FW_px4_X : "<<local_position.x<<"FW_px4_Y"<<local_position.y<<"\n";
 			// std::cout<<"ECL Status : "<<std::bitset<24>(estim.control_mode_flags)<<"\n";
 			// std::cout<<"Wind_North : "<<wind.windspeed_north<<" Wind_East : "<<wind.windspeed_east<<"\n";
 			// std::cout<<"Airspeed : "<<airspeed_sens.true_airspeed_m_s<<"\n";
-		}
+		// }
 
 				if (global_sp_updated) {
 					// struct position_setpoint_triplet_s triplet;
@@ -1191,12 +1367,10 @@ void Controllers::Run()
 
 				/* get the system status and the flight mode we're in */
 				//orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
-				vehicle_status_s vstatus{};
-				vstatus_sub.copy(&vstatus);
 
 				/*Run State Machine*/
 				// float SM_ref[4];
-				// state_machine(control_input,SM_ref,moving_platform.mp_pose);
+				// state_machine(control_input,SM_ref,moving_platform.mp_pose,dt);
 
 				// Publish time
 				// float publish_time = hrt_absolute_time()*1e-6f;
@@ -1210,8 +1384,9 @@ void Controllers::Run()
 
 				/*Run Controllers*/
 				// float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0,vbar_ref=0;
-				float dA=0,dE=0,dF=0,dR=0,dT=0,vbar_ref=0;
-				if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
+				float dA=0,dE=0,dF=0,dR=0,dT=0,vbar_ref=0,hdot_ref=0,href=0;
+				// if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
+				if(1){
 				//if(1){
 					if(!controllers_activate){
 						// printf("!!!Activated Controllers!!!\n");
@@ -1233,9 +1408,18 @@ void Controllers::Run()
 					controllers_activate=true;
 					manual_mode=false;
 
-				/*	//Longitudanal Controllers
-					href=SM_ref[0];//altitude (Make a way to trigger )
-					vbar_ref=SM_ref[1];
+					//Longitudanal Controllers
+					if(com_state.main_state == com_state.MAIN_STATE_ALTCTL){
+						href=(float)17.4817 + fw_custom_control_testing_setpoints.altitude_step;//Altitude setpoint with step
+					}else{
+						href=(float)17.4817;//Altitude setpoint with NO step
+					}
+
+					if(com_state.main_state == com_state.MAIN_STATE_ACRO){
+						vbar_ref=0.0f + fw_custom_control_testing_setpoints.airspeed_step;//Airspeed setpoint (with respect to trim speed(18m/s)) + step
+					}else{
+						vbar_ref=0.0f;//Airspeed setpoint (with respect to trim speed(18m/s))
+					}
 
 					//MPC referance generator!!!
 					// mpc_referance_generator(href,vbar_ref,mpc_ref_in);
@@ -1244,16 +1428,18 @@ void Controllers::Run()
 					mpc_h=-control_input.posz;
 					mpc_vbar=control_input.airspeed-vbar_trim;
 					//MPC activator
-					if(state>=1 && _vcontrol_mode.flag_control_offboard_enabled){
+					// if(state>=1 && _vcontrol_mode.flag_control_offboard_enabled){
+					if(0){ //Disable MPC for now
+						/*
 						//MPC controller
 						if(!mpc_activate){
 							// std::cout<<"Activate MPC"<<"\n";
 							PX4_INFO("Activate MPC");
 							mpc_activate=true;
-							_intergrator_alt_lim=0;//Reset altitude limit integrator
+							_intergrator_alt_lim_mpc=0;//Reset altitude limit integrator
 						}
 						//Limit intergrator calculation
-						float Lim_Int=altitude_limit_intergrator(control_input,href,dt);
+						float Lim_Int=altitude_limit_intergrator_mpc(control_input,href,dt);
 						//MPC inputs(Check if you can publish here then wait for outputs before continuing)
 
 						//MPC outputs
@@ -1271,6 +1457,8 @@ void Controllers::Run()
 						// Custom climb rate controller gains for MPC (Causes transition problem since intergrator gains change)
 						// Ki_CR=0.4130;//Tuning for MPC
 						// Kp_CR=1.4960;//Tuning for MPC
+						*/
+						PX4_INFO("!!!WARNING :MPC altitude and airspeed active !!!");
 
 					}else{
 						//Altitude controller
@@ -1281,33 +1469,30 @@ void Controllers::Run()
 							// std::cout<<"Activate Classical Altitude Controller"<<"\n";
 							PX4_INFO("Activate Classical Altitude Controller");
 							clas_alt_activate=true;
-							_intergrator_alt_lim=0;//Reset altitude limit integrator
+							_intergrator_alt_lim_normal=0;//Reset altitude limit integrator
 						}
-						float Lim_Int=altitude_limit_intergrator(control_input,href,dt);
-						hdot_ref=hdot_ref-Lim_Int;
+						float Lim_Int=altitude_limit_intergrator_normal(control_input,href,dt);
+						hdot_ref=hdot_ref-Lim_Int*0.0f;
 
 						//Airspeed controller
 						dT=airspeed_controller(control_input,vbar_ref,dt);
 						mpc_activate=false;
 
 						// Normal climbrate controller gains
-						Ki_CR=1.0130;//Original CR gain
-						Kp_CR=2.4960;//Original CR gain
+						// Ki_CR=1.0130;//Original CR gain
+						// Kp_CR=2.4960;//Original CR gain
 					}
 
-					hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max);
+					// Longitudinal COntrollers Flight Test
+					if(com_state.main_state == com_state.MAIN_STATE_POSCTL){
+						hdot_ref = 0.0f + fw_custom_control_testing_setpoints.climbrate_step; //Climb rate step
+					}else{
+						hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max); //Altitude controller run
+					}
 
-					// // Testing climbrate controller
-					// if(-control_input.posz>=href && !test_log && !end_log){
-					// 	CR_start_test_time=publish_time;
-					// 	test_log=true;
-					// }else if(publish_time>=(CR_start_test_time+(float)15.00)&& publish_time<=(CR_start_test_time+(float)30.00) && test_log){
-					// 	hdot_ref=1;//Step
-					// }else if(publish_time>=(CR_start_test_time+(float)30.00)&& test_log){
-					// 	test_log=false;
-					// 	test_write=true;
-					// 	end_log=true;
-					// }
+
+					// Climbrate Testing
+					// hdot_ref = -1.0f ;
 
 					//Climbrate controller
 					float Cw_ref;
@@ -1319,15 +1504,19 @@ void Controllers::Run()
 					dE=defl[0];
 					dF=defl[1];
 
-
+				/*
 					//Lateral Controllers
 					//Waypoints
 					// float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-500,0},{0,0}};//Rectangle
 					// float destinations[][2]={{0,0},{15000,0}};//Straight flight
 					// float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{0,0}};//Landing testing Rectangle
 					// float destinations[][2]={{0,0},{300,0},{300,300},{-750,300},{-750,0},{-500,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
-					float destinations[][2]={{0,0},{300,0},{300,300},{-1000,300},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
+					// float destinations[][2]={{0,0},{300,0},{300,300},{-1000,300},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing Rectangle
 					// float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing bigger Rectangle
+					// float destinations[][2]={{0,0},{200,0},{200,250},{-500,250},{-500,0},{-350,0},{TD_position[1],TD_position[0]}};//HRF Gazebo x direction Waypoints
+					float destinations[][2]={{0,0},{0,200},{-250,200},{-250,-500},{0,-500},{0,-350},{TD_position[1],TD_position[0]}};//HRF North Waypoints
+					// float destinations[][2]={{0,0},{-54.7573,192.3581},{-295.2049,123.9115},{-103.5545,-549.3419},{136.8932,-480.8953},{95.8252,-336.6267},{TD_position[1],TD_position[0]}};//HRF Runway Aligned Waypoints
+
 					int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
 					// if(disp_count%50==0 && state>=1){
 					// 	std::cout<<"TD_point_x : "<<TD_position[0]<<" TD_point_y : "<<TD_position[1]<<"\n";
@@ -1344,6 +1533,7 @@ void Controllers::Run()
 					control_input.ydot=guide_val[3];//check
 					y_old=control_input.y;
 					ydot_old=control_input.ydot;
+					// float phi_ref_CT=guidance_controller_1(control_input,phibar_ref,y_ref,dt) - guidance_1_limited_intergrator(control_input, y_ref, dt);
 					float phi_ref_CT=guidance_controller_1(control_input,phibar_ref,y_ref,dt);
 					//Transition Multiplexer
 					float phi_ref=transition_multiplexer(phi_ref_HG,phi_ref_CT, (control_input.y-y_ref));
@@ -1368,8 +1558,8 @@ void Controllers::Run()
 					// std::cout<<"Controllers dR : "<<dR<<"\n";
 				*/
 
-				//Auto Airspeed Control
-				dT=airspeed_controller(control_input,vbar_ref,dt);
+				// //Auto Airspeed Control
+				// dT=airspeed_controller(control_input,vbar_ref,dt);
 
 
 					// disp_count_ctrl++;
@@ -1382,7 +1572,7 @@ void Controllers::Run()
 				// Normalised between -1 and 1 for dA,dE and dR
 				// Normalesed between -1 and 1 on input but converts it to -3500 to 3500 on output.
 				//climb
-				if(control_input.posz>-7 && !controllers_activate){
+			/*	if(control_input.posz>-7 && !controllers_activate){
 					// if((double)euler_angles.phi()<15*M_PI/180){
 					// 	dA=-0.015;
 					// }else{
@@ -1419,7 +1609,7 @@ void Controllers::Run()
 						dT=6.6102;
 					}
 				}
-
+			*/
 
 				// }
 
@@ -1451,12 +1641,13 @@ void Controllers::Run()
 				dF=-dF * (float) 2.5331025;
 
 				//If Landed
-				if(state==6 || control_input.posz>=(float)0.0){
-					dA=(float)0.0;
-					dE=(float)0.0;
-					dR=(float)0.0;
-					dF=(float)0.0;
-				}
+				// if(state==6 || control_input.posz>=(float)0.1){
+				// 	dA=(float)0.0;
+				// 	dE=(float)0.0;
+				// 	dR=(float)0.0;
+				// 	dF=(float)0.0;
+				// 	dT=(float)0.0;
+				// }
 
 				// if(state==2 || state==3 || state==4 || state==5){
 				// 	std::cout<<"Cw : "<<control_input.Cw<<"\n";
@@ -1478,9 +1669,9 @@ void Controllers::Run()
 				// 	hdot_ref_log.push_back(hdot_ref);
 				// 	dTc_log.push_back(dT*_max_thrust-T_Trim);
 				// 	publish_time_log.push_back(publish_time);
-				// 	mp_pose_intra_log.push_back(moving_platform.mp_pose[1]);//Change based on direction of mp motion
-				// 	mp_pose_alt_log.push_back(-moving_platform.mp_pose[2]);
-				// 	fw_intra_log.push_back(control_input.posy);//Change based on direction landing
+				// 	mp_pose_intra_log.push_back(moving_platform.mp_pose[0]);//Change based on direction of mp motion
+				//	mp_pose_alt_log.push_back(-moving_platform.mp_pose[2]);
+				//	fw_intra_log.push_back(control_input.posx);//Change based on direction landing
 				// }
 
 				// if(Log_data==true){
@@ -1568,21 +1759,21 @@ void Controllers::Run()
 				// dF_pub=dF;
 
 				dA_pub=0.0;
-				dE_pub=0.0;
+				dE_pub=dE;
 				dR_pub=0.0;
 				dT_pub=dT;
-				dF_pub=0.0;
+				dF_pub=dF;
 
 				manual_control_setpoint_s manual_control_setpoint;
 				if (manual_control_setpoint_sub.copy(&manual_control_setpoint))
 				{
 
 				dA_pub=manual_control_setpoint.y * _param_fw_man_r_sc.get() + _param_trim_roll.get();
-				dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
+				// dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 				dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 				// dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
 				// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
-				dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+				// dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 				}
 
 
@@ -1592,7 +1783,7 @@ void Controllers::Run()
 
 
 				//print deflection commands
-				disp_count++;
+				// disp_count++;
 				// if(disp_count%100==0)
 				// {
 				// 	printf("Controller Deflections\n");
@@ -1617,6 +1808,10 @@ void Controllers::Run()
 				// std::cout<<"MPC_in publish time : "<<publish_time<<"\n";
 
 				mpc_in_pub.publish(mpc_ins);
+
+				/*publish state machine state value to topic for gazebo*/
+				sm_state.state=state;
+				_sm_state_pub.publish(sm_state);
 
 	}
 
@@ -1664,8 +1859,8 @@ void Controllers::Run()
 		dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 		dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 		dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-		// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
-		dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+		dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		// dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 
 		}
 
@@ -1701,9 +1896,6 @@ void Controllers::Run()
 		//orb_publish(ORB_ID(vehicle_rates_setpoint), rates_pub, &rates_sp);
 		_rate_sp_pub.publish(rates_sp);
 
-		/*publish state machine state value to topic for gazebo*/
-		sm_state.state=state;
-		_sm_state_pub.publish(sm_state);
 
 		/* sanity check and publish actuator outputs */
 		if (PX4_ISFINITE(actuators.control[0]) &&

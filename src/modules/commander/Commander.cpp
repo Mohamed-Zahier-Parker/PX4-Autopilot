@@ -365,6 +365,70 @@ int Commander::custom_command(int argc, char *argv[])
 		}
 	}
 
+	if (!strcmp(argv[0], "fw_cust_get")) {
+		if (argc > 1) {
+			uORB::Subscription _fw_custom_control_testing_sub{ORB_ID(fw_custom_control_testing)};
+			fw_custom_control_testing_s fw_custom_control_testing_setpoints{};
+			_fw_custom_control_testing_sub.copy(&fw_custom_control_testing_setpoints);
+
+			if(!strcmp(argv[1], "airspeed")){
+				PX4_INFO("Airspeed Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.airspeed_step);
+			}else if(!strcmp(argv[1], "climbrate")){
+				PX4_INFO("Climbrate Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.climbrate_step);
+			}else if(!strcmp(argv[1], "altitude")){
+				PX4_INFO("Altitude Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.altitude_step);
+			}else if(!strcmp(argv[1], "all")){
+				PX4_INFO("Airspeed Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.airspeed_step);
+				PX4_INFO("Climbrate Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.climbrate_step);
+				PX4_INFO("Altitude Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.altitude_step);
+			} else {
+				PX4_ERR("argument %s unsupported.", argv[1]);
+			}
+
+			return 0;
+
+		}else{
+			PX4_ERR("missing argument");
+		}
+
+	}
+
+	if (!strcmp(argv[0], "fw_cust_set")) {
+		if (argc > 2) {
+			// uORB::Publication<fw_custom_control_testing_s> _fw_custom_control_testing_pub{ORB_ID(fw_custom_control_testing)};
+			// fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+
+			if(!strcmp(argv[1], "airspeed")){
+				// fw_custom_control_testing_setpoints_set.airspeed_step = atof(argv[2]);
+				// PX4_INFO("Airspeed Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.airspeed_step);
+				// bool published = publish_fw_cust_setpoint(argv[1],atof(argv[2]));
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 1.0f, atof(argv[2]));
+			}else if(!strcmp(argv[1], "climbrate")){
+				// fw_custom_control_testing_setpoints_set.climbrate_step = atof(argv[2]);
+				// PX4_INFO("Climbrate Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.climbrate_step);
+				// publish_fw_cust_setpoint(argv[1],atof(argv[2]));
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 2.0f, atof(argv[2]));
+			}else if(!strcmp(argv[1], "altitude")){
+				// fw_custom_control_testing_setpoints_set.altitude_step = atof(argv[2]);
+				// PX4_INFO("Altitude Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.altitude_step);
+				// publish_fw_cust_setpoint(argv[1],atof(argv[2]));
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 3.0f, atof(argv[2]));
+			}else if(!strcmp(argv[1], "reset")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 10.0f, atof(argv[2]));
+			} else {
+				PX4_ERR("argument %s unsupported.", argv[1]);
+			}
+
+			// _fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+
+			return 0;
+
+		}else{
+			PX4_ERR("missing argument");
+		}
+
+	}
+
 	if (!strcmp(argv[0], "lockdown")) {
 
 		if (argc < 2) {
@@ -832,6 +896,36 @@ Commander::handle_command(const vehicle_command_s &cmd)
 			} else {
 				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
 			}
+		}
+		break;
+
+	case vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET: {
+			if((int)cmd.param1 == 1){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.airspeed_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Airspeed Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.airspeed_step);
+			}else if((int)cmd.param1 == 2){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.climbrate_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Climbrate Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.climbrate_step);
+			}else if((int)cmd.param1 == 3){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.altitude_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Altitude Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.altitude_step);
+			}else if((int)cmd.param1 == 10){ //Reset values to 0
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.airspeed_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.climbrate_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.altitude_step = 0.0f;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Reset Setpoints");
+			}else{
+				PX4_INFO("VEHICLE_CMD_PUB_FW_CUST_SET wrong parameter invalid");
+			}
+
 		}
 		break;
 
