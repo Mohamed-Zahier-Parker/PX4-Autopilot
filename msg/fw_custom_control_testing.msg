@@ -4,3 +4,6 @@ uint64 timestamp			# time since system start (microseconds)
 float32 airspeed_step 			# airspeed step from trim value
 float32 climbrate_step  		# climbrate step from zero m/s
 float32 altitude_step			# altitude step from default value
+float32 roll_angle_step			# altitude step from default value
+float32 ct_err_step			# altitude step from default value
+float32 sideslip_step			# altitude step from default value

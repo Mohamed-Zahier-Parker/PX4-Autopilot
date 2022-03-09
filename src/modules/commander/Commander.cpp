@@ -377,10 +377,19 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("Climbrate Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.climbrate_step);
 			}else if(!strcmp(argv[1], "altitude")){
 				PX4_INFO("Altitude Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.altitude_step);
+			}else if(!strcmp(argv[1], "rollangle")){
+				PX4_INFO("Roll Angle Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.roll_angle_step);
+			}else if(!strcmp(argv[1], "cterr")){
+				PX4_INFO("Cross Track Error Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.ct_err_step);
+			}else if(!strcmp(argv[1], "sideslip")){
+				PX4_INFO("Sideslip Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.sideslip_step);
 			}else if(!strcmp(argv[1], "all")){
 				PX4_INFO("Airspeed Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.airspeed_step);
 				PX4_INFO("Climbrate Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.climbrate_step);
 				PX4_INFO("Altitude Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.altitude_step);
+				PX4_INFO("Roll Angle Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.roll_angle_step);
+				PX4_INFO("Cross Track Error Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.ct_err_step);
+				PX4_INFO("Sideslip Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.sideslip_step);
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
 			}
@@ -413,6 +422,12 @@ int Commander::custom_command(int argc, char *argv[])
 				// PX4_INFO("Altitude Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.altitude_step);
 				// publish_fw_cust_setpoint(argv[1],atof(argv[2]));
 				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 3.0f, atof(argv[2]));
+			}else if(!strcmp(argv[1], "rollangle")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 4.0f, atof(argv[2]));
+			}else if(!strcmp(argv[1], "cterr")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 5.0f, atof(argv[2]));
+			}else if(!strcmp(argv[1], "sideslip")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 6.0f, atof(argv[2]));
 			}else if(!strcmp(argv[1], "reset")){
 				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 10.0f, atof(argv[2]));
 			} else {
@@ -902,24 +917,49 @@ Commander::handle_command(const vehicle_command_s &cmd)
 	case vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET: {
 			if((int)cmd.param1 == 1){
 				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
 				fw_custom_control_testing_setpoints_set.airspeed_step = cmd.param2;
 				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 				PX4_INFO("Airspeed Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.airspeed_step);
 			}else if((int)cmd.param1 == 2){
 				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
 				fw_custom_control_testing_setpoints_set.climbrate_step = cmd.param2;
 				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 				PX4_INFO("Climbrate Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.climbrate_step);
 			}else if((int)cmd.param1 == 3){
 				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
 				fw_custom_control_testing_setpoints_set.altitude_step = cmd.param2;
 				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 				PX4_INFO("Altitude Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.altitude_step);
+			}else if((int)cmd.param1 == 4){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_setpoints_set.roll_angle_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Roll Angle Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.roll_angle_step);
+			}else if((int)cmd.param1 == 5){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_setpoints_set.ct_err_step= cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Cross Track Error Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.ct_err_step);
+			}else if((int)cmd.param1 == 6){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_setpoints_set.sideslip_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+				PX4_INFO("Sideslip Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.sideslip_step);
 			}else if((int)cmd.param1 == 10){ //Reset values to 0
 				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
 				fw_custom_control_testing_setpoints_set.airspeed_step = 0.0f;
 				fw_custom_control_testing_setpoints_set.climbrate_step = 0.0f;
 				fw_custom_control_testing_setpoints_set.altitude_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.roll_angle_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.ct_err_step= 0.0f;
+				fw_custom_control_testing_setpoints_set.sideslip_step = 0.0f;
 				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 				PX4_INFO("Reset Setpoints");
 			}else{

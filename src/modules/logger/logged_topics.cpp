@@ -115,6 +115,14 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_status_flags");
 	add_topic("vtol_vehicle_status", 200);
 	add_topic("wind", 1000);
+	add_topic("fw_custom_control_testing", 100);
+	// bool add_fw_cust= add_topic("fw_custom_control_testing", 100);
+	// if(add_fw_cust){
+	// 	PX4_INFO("Added fw_custom_control_testing topic");
+	// }else{
+	// 	PX4_INFO("Failed fw_custom_control_testing topic");
+	// }
+	// PX4_INFO("Added fw_custom_control_testing topic");
 
 	// Control allocation topics
 	add_topic("vehicle_actuator_setpoint", 20);

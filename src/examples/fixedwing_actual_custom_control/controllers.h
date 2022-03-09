@@ -143,7 +143,7 @@ public:
 	void guide_axis_alg(float S[2],float D[2],const Control_Data &state_data,float out[4]);
 	void waypoint_scheduler(float Destinations[][2],int Destination_size,const Control_Data &state_data,float out[2][2]);
 	void navigation_controller(float D[][2],int Destination_size,const Control_Data &state_data,float out[4]);
-	float guidance_controller_2(float guide_val[4]);
+	float guidance_controller_2(float guide_val[4],float y_ref);
 	float transition_multiplexer(float phi_ref_HG,float phi_ref_CT, float yerr);
 
 	//Actual Controllers
