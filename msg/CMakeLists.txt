@@ -190,6 +190,9 @@ set(msg_files
 	mpc_inputs.msg
 	mpc_outputs.msg
 	fw_custom_control_testing.msg
+	fw_custom_control_testing_mode.msg
+	fw_custom_control_testing_lateral.msg
+	fw_custom_control_testing_states.msg
 )
 
 if(NOT px4_constrained_flash_build)

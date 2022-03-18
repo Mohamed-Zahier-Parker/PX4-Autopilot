@@ -98,6 +98,9 @@
 #include <uORB/topics/vehicle_command.h>
 #include <lib/ecl/geo/geo.h>
 #include <uORB/topics/fw_custom_control_testing.h>
+#include <uORB/topics/fw_custom_control_testing_mode.h>
+#include <uORB/topics/fw_custom_control_testing_lateral.h>
+#include <uORB/topics/fw_custom_control_testing_states.h>
 
 //Graph plotting
 // #include <iostream>
@@ -200,6 +203,8 @@ private:
 	uORB::Subscription commander_state_sub{ORB_ID(commander_state)};
 	uORB::Subscription home_position_sub{ORB_ID(home_position)};
 	uORB::Subscription _fw_custom_control_testing_sub{ORB_ID(fw_custom_control_testing)};
+	uORB::Subscription _fw_custom_control_testing_modes_sub{ORB_ID(fw_custom_control_testing_mode)};
+	uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
@@ -209,6 +214,7 @@ private:
 	uORB::Publication<mpc_inputs_s>	mpc_in_pub{ORB_ID(mpc_inputs)};
 	uORB::Publication<vehicle_command_s>	vehicle_command_pub{ORB_ID(vehicle_command)};
 	// uORB::Publication<fw_custom_control_testing_s>	fw_custom_control_testing_pub{ORB_ID(fw_custom_control_testing)};
+	uORB::Publication<fw_custom_control_testing_states_s>	_fw_custom_control_testing_states_pub{ORB_ID(fw_custom_control_testing_states)};
 
 	actuator_controls_s			actuators {};
 	vehicle_rates_setpoint_s		rates_sp {};
@@ -216,6 +222,7 @@ private:
 	vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
 	fw_controllers_sm_s			sm_state{};
 	mpc_inputs_s				mpc_ins{};
+	fw_custom_control_testing_states_s      fw_custom_control_testing_states{};
 
 	perf_counter_t	_loop_perf;
 
@@ -263,6 +270,9 @@ private:
 
 	// Home position set
 	bool Home_Pose_set=false, EKF_Origin_set=false;
+
+	// Flight Testing
+	float alt_cap = 0.0f ;
 
 
 	DEFINE_PARAMETERS(

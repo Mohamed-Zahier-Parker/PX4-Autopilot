@@ -376,6 +376,8 @@ void crossProduct(float vect_A[], float vect_B[], float cross_P[])
 void Controllers::init_ECL_variables(){
 	_hdot_max=2;//altitude controller saturation block max limit
 	_hdot_min=-2;//altitude controller saturation block min limit
+	// _hdot_max=3.5;//altitude controller saturation block max limit
+	// _hdot_min=-3.5;//altitude controller saturation block min limit
 	_phi_max=(float)(30.0*M_PI/180.0);//heading controller roll angle saturation block max limit
 	_phi_min=(float)(-30.0*M_PI/180.0);//heading controller roll angle saturation block max limit
 	_integrator_I[0][0]=0;_integrator_I[1][0]=0;//Airspeed and Climb Rate integrator
@@ -1264,6 +1266,12 @@ void Controllers::Run()
 		fw_custom_control_testing_s fw_custom_control_testing_setpoints{};
 		_fw_custom_control_testing_sub.copy(&fw_custom_control_testing_setpoints);
 
+		fw_custom_control_testing_mode_s fw_custom_control_testing_modes{};
+		_fw_custom_control_testing_modes_sub.copy(&fw_custom_control_testing_modes);
+
+		fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral{};
+		_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral);
+
 		// if(!Home_Pose_set){
 		// 	vehicle_command_s veh_com{};
 		// 	veh_com.command = (uint16_t) 179; //VEHICLE_CMD_DO_SET_HOME
@@ -1390,7 +1398,7 @@ void Controllers::Run()
 
 
 				/*Run Controllers*/
-				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0,vbar_ref=0;
+				float dA=0,dE=0,dF=0,dR=0,dT=0,hdot_ref=0,guide_val[4],href=0,vbar_ref=0,phi_ref=0,y_ref=0.0f,yaw_ref=0.0f;
 				// float dA=0,dE=0,dF=0,dR=0,dT=0,vbar_ref=0,hdot_ref=0,href=0;
 				// if((control_input.posz<-4 && (double)control_input.airspeed>5) || controllers_activate){
 				if(1){
@@ -1410,26 +1418,23 @@ void Controllers::Run()
 							initialise_integrators(control_input);
 						}
 						// printf("\n");
+						alt_cap = -control_input.posz;
 
 					}
 					controllers_activate=true;
 					manual_mode=false;
 
-					//Longitudanal Controllers
-					// if(com_state.main_state == com_state.MAIN_STATE_ALTCTL){
-					// 	href=(float)17.4817 + fw_custom_control_testing_setpoints.altitude_step;//Altitude setpoint with step
-					// }else{
-					// 	href=(float)17.4817;//Altitude setpoint with NO step
-					// }
+					if(fw_custom_control_testing_modes.altitude_mode){
+						href=alt_cap + math::constrain(fw_custom_control_testing_setpoints.altitude_step, -15.0f, 15.0f);//Altitude setpoint with step
+					}else{
+						href=alt_cap;//Altitude setpoint with NO step
+					}
 
-					// if(com_state.main_state == com_state.MAIN_STATE_ACRO){
-					// 	vbar_ref=0.0f + fw_custom_control_testing_setpoints.airspeed_step;//Airspeed setpoint (with respect to trim speed(18m/s)) + step
-					// }else{
-					// 	vbar_ref=0.0f;//Airspeed setpoint (with respect to trim speed(18m/s))
-					// }
-
-					href=(float)17.4817;//Altitude setpoint with NO step
-					vbar_ref=0.0f;//Airspeed setpoint (with respect to trim speed(18m/s))
+					if(fw_custom_control_testing_modes.airspeed_mode){
+						vbar_ref=0.0f + math::constrain(fw_custom_control_testing_setpoints.airspeed_step, -2.0f, 2.0f);//Airspeed setpoint (with respect to trim speed(18m/s)) + step
+					}else{
+						vbar_ref=0.0f;//Airspeed setpoint (with respect to trim speed(18m/s))
+					}
 
 					//MPC referance generator!!!
 					// mpc_referance_generator(href,vbar_ref,mpc_ref_in);
@@ -1494,13 +1499,11 @@ void Controllers::Run()
 					}
 
 					// Longitudinal COntrollers Flight Test
-					// if(com_state.main_state == com_state.MAIN_STATE_POSCTL){
-					// 	hdot_ref = 0.0f + fw_custom_control_testing_setpoints.climbrate_step; //Climb rate step
-					// }else{
-					// 	hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max); //Altitude controller run
-					// }
-
-					hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max); //Altitude controller run
+					if(fw_custom_control_testing_modes.climbrate_mode){
+						hdot_ref = 0.0f + math::constrain(fw_custom_control_testing_setpoints.climbrate_step, -3.0f, 3.0f); //Climb rate step
+					}else{
+						hdot_ref=math::constrain(hdot_ref, _hdot_min, _hdot_max); //Altitude controller run
+					}
 
 
 					// Climbrate Testing
@@ -1530,8 +1533,8 @@ void Controllers::Run()
 					navigation_controller(destinations,destination_size,control_input,guide_val);
 					//Guidance and Heading controllers
 					// float y_ref=SM_ref[2];
-					float y_ref=0.0f;
-					if(com_state.main_state == com_state.MAIN_STATE_POSCTL){
+					y_ref=0.0f;
+					if(fw_custom_control_testing_modes.ct_mode){
 						y_ref=0.0f + fw_custom_control_testing_setpoints.ct_err_step;
 					}else{
 						y_ref=0.0f;
@@ -1548,10 +1551,10 @@ void Controllers::Run()
 					// float phi_ref_CT=guidance_controller_1(control_input,phibar_ref,y_ref,dt) - guidance_1_limited_intergrator(control_input, y_ref, dt);
 					float phi_ref_CT=guidance_controller_1(control_input,phibar_ref,y_ref,dt);
 					//Transition Multiplexer
-					float phi_ref=transition_multiplexer(phi_ref_HG,phi_ref_CT, (control_input.y-y_ref));
+					phi_ref=transition_multiplexer(phi_ref_HG,phi_ref_CT, (control_input.y-y_ref));
 					// phi_ref = math::constrain(phi_ref, _phi_min, _phi_max);
 
-					if(com_state.main_state == com_state.MAIN_STATE_ACRO){
+					if(fw_custom_control_testing_modes.roll_angle_mode){
 						phi_ref=0.0f + fw_custom_control_testing_setpoints.roll_angle_step * (float)(M_PI/180.0);
 					}else{
 						phi_ref = math::constrain(phi_ref, _phi_min, _phi_max);
@@ -1563,8 +1566,8 @@ void Controllers::Run()
 					dA=roll_rate_controller(control_input,p_ref,dt);
 					//Yaw controller
 					// float yaw_ref=SM_ref[3];
-					float yaw_ref=0.0f;
-					if(com_state.main_state == com_state.MAIN_STATE_ALTCTL){
+					yaw_ref=0.0f;
+					if(fw_custom_control_testing_modes.sideslip_mode){
 						yaw_ref=0.0f + fw_custom_control_testing_setpoints.sideslip_step * (float)(M_PI/180.0);
 						yaw_ctrl = true;
 					}else{
@@ -1786,11 +1789,24 @@ void Controllers::Run()
 				// dT_pub=dT;
 				// dF_pub=dF;
 
-				dA_pub=dA;
+
 				dE_pub=dE;
-				dR_pub=dR;
 				dT_pub=dT;
 				dF_pub=dF;
+				dA_pub=0.0f;
+				dR_pub=0.0f;
+
+				if(fw_custom_control_testing_lateral.lateral_control){ //Enable lateral control
+					dA_pub=dA;
+					dR_pub=dR;
+				}else{
+					manual_control_setpoint_s manual_control_setpoint; //Disable lateral control(manual)
+					manual_control_setpoint_sub.copy(&manual_control_setpoint);
+					dA_pub=manual_control_setpoint.y * _param_fw_man_r_sc.get() + _param_trim_roll.get();
+					dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
+				}
+
+
 
 				// manual_control_setpoint_s manual_control_setpoint;
 				// if (manual_control_setpoint_sub.copy(&manual_control_setpoint))
@@ -1840,6 +1856,20 @@ void Controllers::Run()
 				/*publish state machine state value to topic for gazebo*/
 				sm_state.state=state;
 				_sm_state_pub.publish(sm_state);
+
+				fw_custom_control_testing_states.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_states.beta = control_input.beta;
+				fw_custom_control_testing_states.y_ct = control_input.y;
+				fw_custom_control_testing_states.href = href;
+				fw_custom_control_testing_states.vref = vbar_ref;
+				fw_custom_control_testing_states.hdotref = hdot_ref;
+				fw_custom_control_testing_states.phiref = phi_ref;
+				fw_custom_control_testing_states.yref = y_ref;
+				fw_custom_control_testing_states.betaref = yaw_ref;
+				fw_custom_control_testing_states.phi = control_input.phi;
+				fw_custom_control_testing_states.h = -control_input.posz;
+				fw_custom_control_testing_states.hdot = control_input.h_dot;
+				_fw_custom_control_testing_states_pub.publish(fw_custom_control_testing_states);
 
 	}
 

@@ -90,6 +90,8 @@
 
 #include <uORB/topics/fw_custom_control_testing.h>
 #include <stdlib.h>
+#include <uORB/topics/fw_custom_control_testing_mode.h>
+#include <uORB/topics/fw_custom_control_testing_lateral.h>
 
 using math::constrain;
 using systemlib::Hysteresis;
@@ -444,6 +446,8 @@ private:
 	uORB::Publication<vehicle_command_ack_s>		_command_ack_pub{ORB_ID(vehicle_command_ack)};
 
 	uORB::Publication<fw_custom_control_testing_s> _fw_custom_control_testing_pub{ORB_ID(fw_custom_control_testing)};
+	uORB::Publication<fw_custom_control_testing_mode_s> _fw_custom_control_testing_mode_pub{ORB_ID(fw_custom_control_testing_mode)};
+	uORB::Publication<fw_custom_control_testing_lateral_s> _fw_custom_control_testing_lateral_pub{ORB_ID(fw_custom_control_testing_lateral)};
 
 	orb_advert_t _mavlink_log_pub{nullptr};
 };
