@@ -206,4 +206,8 @@ protected:
 	float Ki_y_lim;
 	float _min_guid1_lim;
 	float _max_guid1_lim;
+	float _Cw_min;
+	float _Cw_max;
+	float _Bw_min;
+	float _Bw_max;
 };

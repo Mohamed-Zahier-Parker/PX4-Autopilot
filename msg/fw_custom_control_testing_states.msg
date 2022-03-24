@@ -11,3 +11,4 @@ float32 phiref				#roll angle referance
 float32 phi                             #roll angle
 float32 h				#altitude
 float32 hdot				#climbrate
+float32 v                               #airspeed

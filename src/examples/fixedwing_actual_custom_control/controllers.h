@@ -274,6 +274,9 @@ private:
 	// Flight Testing
 	float alt_cap = 0.0f ;
 
+	// Waypoint capture
+	bool waypoint_capture = false;
+
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::FW_MAN_P_MAX>) _param_fw_man_p_max,

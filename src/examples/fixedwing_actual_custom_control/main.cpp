@@ -440,7 +440,7 @@ void Controllers::init_ECL_variables(){
 	dg=250;
 	dis_t=71.5;
 	Ki_alt_lim_mpc=0.6;
-	Ki_alt_lim_normal=0.05;
+	Ki_alt_lim_normal=0.5;
 	_intergrator_alt_lim_mpc=0;
 	_intergrator_alt_lim_normal=0;
 	_min_alt_lim_mpc=-2.0;
@@ -453,6 +453,10 @@ void Controllers::init_ECL_variables(){
 	Ki_y_lim = 0.002;
 	_min_guid1_lim = -4.0*M_PI/180.0;
 	_max_guid1_lim = 4.0*M_PI/180.0;
+	_Cw_min = -19.62;//-2g
+	_Cw_max = 0.0;//-0g
+	_Bw_min = -9.81;
+	_Bw_max = 9.81;
 }
 
 void Controllers::initialise_NSADLC_HPF()
@@ -561,7 +565,18 @@ void Controllers::NSADLC_controller(const Control_Data &state_data,float Cw_ref,
 float Controllers::climb_rate_controller(const Control_Data &state_data,float hdot_ref,const float dt)
 {
 	float edot_r=-hdot_ref+state_data.h_dot;
-	_intergrator_CR=_intergrator_CR+edot_r*dt;
+	// _intergrator_CR=_intergrator_CR+edot_r*dt;
+	// float Cw_ref=-Ki_CR*_intergrator_CR-Kp_CR*edot_r;
+	// return Cw_ref;
+
+	//Intergrator conditional anti-windup
+	if((_intergrator_CR+edot_r*dt)*-Ki_CR >= (-_Cw_min)){
+		_intergrator_CR = (-_Cw_min)/-Ki_CR;
+	}else if((_intergrator_CR+edot_r*dt)*-Ki_CR <= (-_Cw_max)){
+		_intergrator_CR = (-_Cw_max)/-Ki_CR;
+	}else{
+		_intergrator_CR=_intergrator_CR+edot_r*dt;
+	}
 	float Cw_ref=-Ki_CR*_intergrator_CR-Kp_CR*edot_r;
 	return Cw_ref;
 }
@@ -723,8 +738,20 @@ float Controllers::guidance_1_limited_intergrator(const Control_Data &state_data
 float Controllers::yaw_controller(const Control_Data &state_data,float psi_ref,const float dt)
 {
 	float edot_psi=state_data.beta-psi_ref;
-	_intergrator_yaw=_intergrator_yaw+edot_psi*dt;
+	// _intergrator_yaw=_intergrator_yaw+edot_psi*dt;
+	// float Bw_ref=-Ki_yaw*_intergrator_yaw-Kp_yaw*edot_psi;
+	// return Bw_ref;
+
+	// Conditional Intergrator Windup
+	if((_intergrator_yaw+edot_psi*dt)*-Ki_yaw >= (_Bw_max)){
+		_intergrator_yaw = (_Bw_max)/-Ki_yaw;
+	}else if((_intergrator_yaw+edot_psi*dt)*-Ki_yaw <= (_Bw_min)){
+		_intergrator_yaw = (_Bw_min)/-Ki_yaw;
+	}else{
+		_intergrator_yaw=_intergrator_yaw+edot_psi*dt;
+	}
 	float Bw_ref=-Ki_yaw*_intergrator_yaw-Kp_yaw*edot_psi;
+	Bw_ref=math::constrain(Bw_ref,_Bw_min,_Bw_max);
 	return Bw_ref;
 }
 
@@ -802,7 +829,7 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
 		}else
 		{
 		waypoint_END=true;//End waypoint navigation
-		PX4_INFO("waypoint_END");
+		// PX4_INFO("waypoint_END");
 		// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//Update last starting point
 		out[0][0]=Destinations[_loc_guide][0];out[0][1]=Destinations[_loc_guide][1];
 		// std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//keep desitination the same
@@ -822,6 +849,7 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
 			//Reset waypoints
        			_loc_guide=1;
 			_x_guide=0;
+			PX4_INFO("Reset Waypoints");
 		}
 	}
 	out[0][0]=Destinations[_loc_guide-1][0];out[0][1]=Destinations[_loc_guide-1][1];
@@ -1272,19 +1300,19 @@ void Controllers::Run()
 		fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral{};
 		_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral);
 
-		// if(!Home_Pose_set){
-		// 	vehicle_command_s veh_com{};
-		// 	veh_com.command = (uint16_t) 179; //VEHICLE_CMD_DO_SET_HOME
-		// 	veh_com.target_system = vstatus.system_id;
-		// 	veh_com.target_component = vstatus.component_id;
-		// 	veh_com.param1 = (float) 0.0;
-		// 	veh_com.param5 = (double) -34.0473810;
-		// 	veh_com.param6 = (double) 18.7405320;
-		// 	veh_com.param7 = (float) 10.3 +0.1722f;
-		// 	vehicle_command_pub.publish(veh_com);
-		// 	Home_Pose_set=true;
-		// 	PX4_INFO("Set Manual Home Postion");
-		// }
+		if(!Home_Pose_set){
+			vehicle_command_s veh_com{};
+			veh_com.command = (uint16_t) 179; //VEHICLE_CMD_DO_SET_HOME
+			veh_com.target_system = vstatus.system_id;
+			veh_com.target_component = vstatus.component_id;
+			veh_com.param1 = (float) 0.0;
+			veh_com.param5 = (double) -34.0469250;
+			veh_com.param6 = (double) 18.7403705;
+			veh_com.param7 = (float) 9.194;
+			vehicle_command_pub.publish(veh_com);
+			Home_Pose_set=true;
+			PX4_INFO("Set Manual Home Postion");
+		}
 
 		// if(!EKF_Origin_set){
 		// 	vehicle_command_s veh_com{};
@@ -1487,7 +1515,7 @@ void Controllers::Run()
 							_intergrator_alt_lim_normal=0;//Reset altitude limit integrator
 						}
 						float Lim_Int=altitude_limit_intergrator_normal(control_input,href,dt);
-						hdot_ref=hdot_ref-Lim_Int*0.0f;
+						hdot_ref=hdot_ref-Lim_Int;
 
 						//Airspeed controller
 						dT=airspeed_controller(control_input,vbar_ref,dt);
@@ -1514,6 +1542,7 @@ void Controllers::Run()
 					Cw_ref=climb_rate_controller(control_input,hdot_ref,dt);
 					//NSADLC controller
 					Cw_ref=-Cw_ref;
+					Cw_ref=math::constrain(Cw_ref, _Cw_min, _Cw_max);
 					float defl[2];
 					NSADLC_controller(control_input,Cw_ref,dt,&defl[0]);
 					dE=defl[0];
@@ -1521,21 +1550,42 @@ void Controllers::Run()
 
 
 					//Lateral Controllers
+					if(fw_custom_control_testing_lateral.lateral_control){
 					//Waypoints
 					// float destinations[][2]={{0,0},{15000,0}};//Straight flight
 					// float destinations[][2]={{0,0},{1000,0},{1000,500},{-1000,500},{-1000,0},{-750,0},{TD_position[1],TD_position[0]}};//Landing testing bigger Rectangle
 					// float destinations[][2]={{0,0},{200,0},{200,250},{-500,250},{-500,0},{-350,0},{TD_position[1],TD_position[0]}};//HRF Gazebo x direction Waypoints
 					// float destinations[][2]={{0,0},{0,200},{-250,200},{-250,-500},{0,-500},{0,-350},{TD_position[1],TD_position[0]}};//HRF North Waypoints
-					float destinations[][2]={{0.0f,0.0f},{-54.7573,192.3581},{-295.2049,123.9115},{-103.5545,-549.3419},{136.8932,-480.8953},{95.8252,-336.6267},{0.0f,0.0f}};//HRF Runway Aligned Waypoints
+					// float destinations[][2]={{0.0f,0.0f},{-54.7573,192.3581},{-295.2049,123.9115},{-103.5545,-549.3419},{136.8932,-480.8953},{95.8252,-336.6267},{0.0f,0.0f}};//HRF Runway Aligned Waypoints
+					float destinations[][2]={{0.0f,0.0f},{-55.5401,192.1336},{-295.7070,122.7085},{-198.5119,-213.5252},{-101.3168,-549.7590},{138.8502,-480.3339},{97.1951,-336.2337},{0.0f,0.0f}};//HRF Runway Aligned Waypoints Actual (added extra waypoint for capture)
 
 					int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
+
+					// Waypoint capture
+					if(!waypoint_capture){
+						// Get closest waypoint
+						int close_loc = 1;
+						float close_dist = sqrt(pow((control_input.posx-destinations[0][1]),2)+pow((control_input.posy-destinations[0][0]),2));
+						for(int des_pos = 1; des_pos<destination_size; des_pos++){
+							float cur_dist = sqrt(pow((control_input.posx-destinations[des_pos][1]),2)+pow((control_input.posy-destinations[des_pos][0]),2));
+							if(cur_dist<close_dist){
+								close_dist = cur_dist;
+								close_loc = des_pos + 1;
+							}
+						}
+						_loc_guide = close_loc;
+						_x_guide = 0;
+						waypoint_capture = true;
+						PX4_INFO("Waypoint Choosen as Source: \t%d",_loc_guide-1);
+					}
+
 					//Navigation controller
 					navigation_controller(destinations,destination_size,control_input,guide_val);
 					//Guidance and Heading controllers
 					// float y_ref=SM_ref[2];
 					y_ref=0.0f;
 					if(fw_custom_control_testing_modes.ct_mode){
-						y_ref=0.0f + fw_custom_control_testing_setpoints.ct_err_step;
+						y_ref=0.0f + math::constrain(fw_custom_control_testing_setpoints.ct_err_step,-20.0f,20.0f);
 					}else{
 						y_ref=0.0f;
 					}
@@ -1555,7 +1605,7 @@ void Controllers::Run()
 					// phi_ref = math::constrain(phi_ref, _phi_min, _phi_max);
 
 					if(fw_custom_control_testing_modes.roll_angle_mode){
-						phi_ref=0.0f + fw_custom_control_testing_setpoints.roll_angle_step * (float)(M_PI/180.0);
+						phi_ref=0.0f + math::constrain(fw_custom_control_testing_setpoints.roll_angle_step,-30.0f,30.0f) * (float)(M_PI/180.0);
 					}else{
 						phi_ref = math::constrain(phi_ref, _phi_min, _phi_max);
 					}
@@ -1568,7 +1618,7 @@ void Controllers::Run()
 					// float yaw_ref=SM_ref[3];
 					yaw_ref=0.0f;
 					if(fw_custom_control_testing_modes.sideslip_mode){
-						yaw_ref=0.0f + fw_custom_control_testing_setpoints.sideslip_step * (float)(M_PI/180.0);
+						yaw_ref=0.0f + math::constrain(fw_custom_control_testing_setpoints.sideslip_step,-15.0f,15.0f) * (float)(M_PI/180.0);
 						yaw_ctrl = true;
 					}else{
 						yaw_ref=0.0f;
@@ -1587,7 +1637,11 @@ void Controllers::Run()
 					dR=LSA(control_input,Bw_ref,dt);
 					//Testing rudder command
 					// std::cout<<"Controllers dR : "<<dR<<"\n";
-
+					}else{
+						dA = 0.0f;
+						dR = 0.0f;
+						waypoint_capture = false;
+					}
 
 				// //Auto Airspeed Control
 				// dT=airspeed_controller(control_input,vbar_ref,dt);
@@ -1869,6 +1923,7 @@ void Controllers::Run()
 				fw_custom_control_testing_states.phi = control_input.phi;
 				fw_custom_control_testing_states.h = -control_input.posz;
 				fw_custom_control_testing_states.hdot = control_input.h_dot;
+				fw_custom_control_testing_states.v = control_input.airspeed - vbar_trim;
 				_fw_custom_control_testing_states_pub.publish(fw_custom_control_testing_states);
 
 	}
@@ -1884,6 +1939,7 @@ void Controllers::Run()
 		}
 		manual_mode=true;
 		controllers_activate=false;
+		waypoint_capture = false;
 		manual_control_setpoint_s manual_control_setpoint;
 		if (manual_control_setpoint_sub.copy(&manual_control_setpoint))
 		{

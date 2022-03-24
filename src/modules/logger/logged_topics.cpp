@@ -115,10 +115,10 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_status_flags");
 	add_topic("vtol_vehicle_status", 200);
 	add_topic("wind", 1000);
-	add_topic("fw_custom_control_testing", 100);
-	add_topic("fw_custom_control_testing_mode", 100);
-	add_topic("fw_custom_control_testing_lateral", 100);
-	add_topic("fw_custom_control_testing_states", 100);
+	add_topic("fw_custom_control_testing", 20);
+	add_topic("fw_custom_control_testing_mode", 20);
+	add_topic("fw_custom_control_testing_lateral", 20);
+	add_topic("fw_custom_control_testing_states", 20);
 
 	// Control allocation topics
 	add_topic("vehicle_actuator_setpoint", 20);

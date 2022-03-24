@@ -161,7 +161,7 @@ elif [ "$program" == "gazebo" ] && [ ! -n "$no_sim" ]; then
 
 		# while gz model --verbose --spawn-file="${modelpath}/${model}/${model_name}.sdf" --model-name=${model} -x 1.01 -y 0.98 -z 0.83 2>&1 | grep -q "An instance of Gazebo is not running."; do
 		# while gz model --verbose --spawn-file="${modelpath}/${model}/${model_name}.sdf" --model-name=${model} -x 0.00 -y 0.00 -z 0.83 2>&1 | grep -q "An instance of Gazebo is not running."; do
-		while gz model --verbose --spawn-file="${modelpath}/${model}/${model_name}.sdf" --model-name=${model} -x 0.00 -y 0.00 -z 0.30 2>&1 -Y 1.8481 | grep -q "An instance of Gazebo is not running."; do
+		while gz model --verbose --spawn-file="${modelpath}/${model}/${model_name}.sdf" --model-name=${model} -x 0.00 -y 0.00 -z 0.30 2>&1 -Y 1.8522 | grep -q "An instance of Gazebo is not running."; do
 			echo "gzserver not ready yet, trying again!"
 			sleep 1
 		done
