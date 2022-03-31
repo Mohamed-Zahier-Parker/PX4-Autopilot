@@ -1713,17 +1713,17 @@ void Controllers::Run()
 				//!!!CHECK BELOW!!!
 
 				/* Gazebo axes compensation for SIMULATION*/
-				dA=-dA;
-				dE=-dE;
-				dR=-dR;
-				dF=-dF;
+				// dA=-dA;
+				// dE=-dE;
+				// dR=-dR;
+				// dF=-dF;
 
 				/* Compensating for phyical control surface deformation for PIXHAWK 4 CODE*/
-				// dA=-dA * (float) 2.223525;
-				// dE=-dE * (float)1.8193;// Scaler is for controller only
-				// // dT=dT;
-				// dR=-dR * (float)1.60315;
-				// dF=-dF * (float) 2.5331025;
+				dA=-dA * (float) 2.223525;
+				dE=-dE * (float)1.8193;// Scaler is for controller only
+				// dT=dT;
+				dR=-dR * (float)1.60315;
+				dF=-dF * (float) 2.5331025;
 
 				//If Landed
 				// if(state==6 || control_input.posz>=(float)0.1){
@@ -1973,8 +1973,8 @@ void Controllers::Run()
 		dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 		dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 		dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-		dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
-		// dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+		// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 
 		}
 
