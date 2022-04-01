@@ -1855,9 +1855,10 @@ void Controllers::Run()
 					dR_pub=dR;
 				}else{
 					manual_control_setpoint_s manual_control_setpoint; //Disable lateral control(manual)
-					manual_control_setpoint_sub.copy(&manual_control_setpoint);
-					dA_pub=manual_control_setpoint.y * _param_fw_man_r_sc.get() + _param_trim_roll.get();
-					dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
+					if(manual_control_setpoint_sub.copy(&manual_control_setpoint)){
+						dA_pub=manual_control_setpoint.y * _param_fw_man_r_sc.get() + _param_trim_roll.get();
+						dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
+					}
 				}
 
 
