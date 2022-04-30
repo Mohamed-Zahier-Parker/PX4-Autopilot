@@ -73,6 +73,9 @@ private:
 			msg.mpc_mo_in[0] = mpc_inputs_data.mpc_mo_in[0];
 			msg.mpc_mo_in[1] = mpc_inputs_data.mpc_mo_in[1];
 			msg.state = mpc_inputs_data.state;
+			msg.grd_vel = mpc_inputs_data.grd_vel;
+			msg.ramp_trajectory = mpc_inputs_data.ramp_trajectory;
+			msg.mpc_activate = mpc_inputs_data.mpc_activate;
 			mpc_inputs_updated = true;
 		}
 

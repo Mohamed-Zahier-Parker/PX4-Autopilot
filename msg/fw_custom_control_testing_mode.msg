@@ -7,3 +7,7 @@ bool altitude_mode			# altitude mode enabler
 bool roll_angle_mode			# roll angle mode enabler
 bool ct_mode				# cross track mode enabler
 bool sideslip_mode			# sideslip mode enabler
+bool mpc_airspeed_mode			# mpc airspeed mode enabler
+bool mpc_altitude_mode			# mpc altitude mode enabler
+bool mpc_ramp_mode			# mpc ramp mode enabler
+bool land_mode				# State Machine mode enabler

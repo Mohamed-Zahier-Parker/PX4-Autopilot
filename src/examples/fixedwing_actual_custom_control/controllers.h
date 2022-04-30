@@ -71,7 +71,6 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
@@ -101,6 +100,7 @@
 #include <uORB/topics/fw_custom_control_testing_mode.h>
 #include <uORB/topics/fw_custom_control_testing_lateral.h>
 #include <uORB/topics/fw_custom_control_testing_states.h>
+#include <uORB/topics/vehicle_gps_position.h>
 
 //Graph plotting
 // #include <iostream>
@@ -158,7 +158,7 @@ public:
 	float roll_rate_controller(const Control_Data &state_data,float p_ref,const float dt);
 	float roll_angle_controller(const Control_Data &state_data,float phi_ref,const float dt);
 	float guidance_controller_1(const Control_Data &state_data,float phibar_ref,float y_ref,const float dt);
-	float yaw_controller(const Control_Data &state_data,float psi_ref,const float dt);
+	float yaw_controller(const Control_Data &state_data,float psi_ref,float psi_crab_error,const float dt);
 
 	void reset_integrators();
 	void vehicle_control_mode_poll();
@@ -205,6 +205,7 @@ private:
 	uORB::Subscription _fw_custom_control_testing_sub{ORB_ID(fw_custom_control_testing)};
 	uORB::Subscription _fw_custom_control_testing_modes_sub{ORB_ID(fw_custom_control_testing_mode)};
 	uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
+	uORB::Subscription gps_pos_sub{ORB_ID(vehicle_gps_position)};
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
@@ -273,10 +274,16 @@ private:
 
 	// Flight Testing
 	float alt_cap = 0.0f ;
+	float mpc_ramp_origin[2] ={0,0};
+	bool mpc_ramp_init = false;
+	float mpc_ramp_max_dist = 0.0f;
 
 	// Waypoint capture
 	bool waypoint_capture = false;
+	bool land_init=false;
 
+	// logs
+	float dA_ctrl=0,dE_ctrl=0,dR_ctrl=0,dT_ctrl=0,dF_ctrl=0;
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::FW_MAN_P_MAX>) _param_fw_man_p_max,

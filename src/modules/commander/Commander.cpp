@@ -383,6 +383,12 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("Cross Track Error Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.ct_err_step);
 			}else if(!strcmp(argv[1], "sideslip")){
 				PX4_INFO("Sideslip Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.sideslip_step);
+			}else if(!strcmp(argv[1], "mpc_airspeed")){
+				PX4_INFO("MPC Airspeed Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.mpc_airspeed_step);
+			}else if(!strcmp(argv[1], "mpc_altitude")){
+				PX4_INFO("MPC Altitide Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.mpc_altitude_step);
+			}else if(!strcmp(argv[1], "mpc_ramp")){
+				PX4_INFO("MPC Ramp point: \t%.2f",(double)fw_custom_control_testing_setpoints.mpc_altitude_ramp);
 			}else if(!strcmp(argv[1], "all")){
 				PX4_INFO("Airspeed Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.airspeed_step);
 				PX4_INFO("Climbrate Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.climbrate_step);
@@ -390,6 +396,9 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("Roll Angle Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.roll_angle_step);
 				PX4_INFO("Cross Track Error Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.ct_err_step);
 				PX4_INFO("Sideslip Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.sideslip_step);
+				PX4_INFO("MPC Airspeed Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.mpc_airspeed_step);
+				PX4_INFO("MPC Altitide Setpoint : \t%.2f",(double)fw_custom_control_testing_setpoints.mpc_altitude_step);
+				PX4_INFO("MPC Ramp point: \t%.2f",(double)fw_custom_control_testing_setpoints.mpc_altitude_ramp);
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
 			}
@@ -434,6 +443,15 @@ int Commander::custom_command(int argc, char *argv[])
 			}else if(!strcmp(argv[1], "sideslip")){
 				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 6.0f, atof(argv[2]));
 				PX4_INFO("Sideslipe Setpoint is set to: \t%.2f",(double)atof(argv[2]));
+			}else if(!strcmp(argv[1], "mpc_airspeed")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 16.0f, atof(argv[2]));
+				PX4_INFO("MPC Airspeed Setpoint is set to: \t%.2f",(double)atof(argv[2]));
+			}else if(!strcmp(argv[1], "mpc_altitude")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 17.0f, atof(argv[2]));
+				PX4_INFO("MPC Altitude Setpoint is set to: \t%.2f",(double)atof(argv[2]));
+			}else if(!strcmp(argv[1], "mpc_ramp")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 18.0f, atof(argv[2]));
+				PX4_INFO("MPC Ramp Point is set to: \t%.2f",(double)atof(argv[2]));
 			}else if(!strcmp(argv[1], "reset")){
 				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 7.0f, atof(argv[2]));
 				PX4_INFO("Reset Setpoints");
@@ -473,8 +491,16 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("Cross-Track Mode : \t%s",fw_custom_control_testing_modes.ct_mode ? "true" : "false");
 			}else if(!strcmp(argv[1], "sideslip")){
 				PX4_INFO("Sideslip Mode : \t%s",fw_custom_control_testing_modes.sideslip_mode ? "true" : "false");
-			}else if(!strcmp(argv[1], "lateralctrl")){
-				PX4_INFO("Lateral Control: \t%s",fw_custom_control_testing_lateral_state.lateral_control ? "true" : "false");
+			}else if(!strcmp(argv[1], "lateralctrldis")){
+				PX4_INFO("Lateral Control Disable: \t%s",fw_custom_control_testing_lateral_state.lateral_control_disable ? "true" : "false");
+			}else if(!strcmp(argv[1], "mpc_airspeed")){
+				PX4_INFO("MPC Airspeed Mode : \t%s",fw_custom_control_testing_modes.mpc_airspeed_mode ? "true" : "false");
+			}else if(!strcmp(argv[1], "mpc_altitude")){
+				PX4_INFO("MPC Altitude Mode : \t%s",fw_custom_control_testing_modes.mpc_altitude_mode ? "true" : "false");
+			}else if(!strcmp(argv[1], "mpc_ramp")){
+				PX4_INFO("MPC Ramp Mode : \t%s",fw_custom_control_testing_modes.mpc_ramp_mode ? "true" : "false");
+			}else if(!strcmp(argv[1], "land")){
+				PX4_INFO("Land Mode : \t%s",fw_custom_control_testing_modes.land_mode ? "true" : "false");
 			}else if(!strcmp(argv[1], "all")){
 				PX4_INFO("Airspeed Mode : \t%s",fw_custom_control_testing_modes.airspeed_mode ? "true" : "false");
 				PX4_INFO("Climbrate Mode : \t%s",fw_custom_control_testing_modes.climbrate_mode ? "true" : "false");
@@ -482,7 +508,11 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("Roll Angle Mode : \t%s",fw_custom_control_testing_modes.roll_angle_mode ? "true" : "false");
 				PX4_INFO("Cross-Track Mode : \t%s",fw_custom_control_testing_modes.ct_mode ? "true" : "false");
 				PX4_INFO("Sideslip Mode : \t%s",fw_custom_control_testing_modes.sideslip_mode ? "true" : "false");
-				PX4_INFO("Lateral Control: \t%s",fw_custom_control_testing_lateral_state.lateral_control ? "true" : "false");
+				PX4_INFO("Lateral Control Disabled: \t%s",fw_custom_control_testing_lateral_state.lateral_control_disable ? "true" : "false");
+				PX4_INFO("MPC Airspeed Mode : \t%s",fw_custom_control_testing_modes.mpc_airspeed_mode ? "true" : "false");
+				PX4_INFO("MPC Altitude Mode : \t%s",fw_custom_control_testing_modes.mpc_altitude_mode ? "true" : "false");
+				PX4_INFO("MPC Ramp Mode : \t%s",fw_custom_control_testing_modes.mpc_ramp_mode ? "true" : "false");
+				PX4_INFO("Land Mode : \t%s",fw_custom_control_testing_modes.land_mode ? "true" : "false");
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
 			}
@@ -550,7 +580,7 @@ int Commander::custom_command(int argc, char *argv[])
 				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
 				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
 				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
-				if(fw_custom_control_testing_lateral_state.lateral_control){
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable){
 					if(!strcmp(argv[2], "enable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 11.0f, 1.0f);
 						PX4_INFO("Roll Angle mode is enabled");
@@ -569,7 +599,7 @@ int Commander::custom_command(int argc, char *argv[])
 				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
 				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
 				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
-				if(fw_custom_control_testing_lateral_state.lateral_control){
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable){
 					if(!strcmp(argv[2], "enable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 12.0f, 1.0f);
 						PX4_INFO("Cross-Track mode is enabled");
@@ -587,7 +617,7 @@ int Commander::custom_command(int argc, char *argv[])
 				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
 				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
 				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
-				if(fw_custom_control_testing_lateral_state.lateral_control){
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable){
 					if(!strcmp(argv[2], "enable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 13.0f, 1.0f);
 						PX4_INFO("Sideslip mode is enabled");
@@ -601,17 +631,90 @@ int Commander::custom_command(int argc, char *argv[])
 					PX4_INFO("Lateral Control is NOT engaged");
 				}
 
-			}else if(!strcmp(argv[1], "lateralctrl")){
+			}else if(!strcmp(argv[1], "lateralctrldis")){
 				if(!strcmp(argv[2], "enable")){
 					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 14.0f, 1.0f);
 					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 15.0f, 0.0f); //Reset Modes
-					PX4_INFO("Lateral Control is enabled");
+					PX4_INFO("Lateral Control is disabled");
 				}else if(!strcmp(argv[2], "disable")){
 					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 14.0f, 0.0f);
 					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 15.0f, 0.0f); //Reset Modes
-					PX4_INFO("Lateral Control is disabled");
+					PX4_INFO("Lateral Control is enabled");
 				}else{
 					PX4_ERR("argument %s unsupported.", argv[2]);
+				}
+
+			}else if(!strcmp(argv[1], "mpc_airspeed")){
+				uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
+				vehicle_control_mode_s	_vcontrol_mode {};
+				_vcontrol_mode_sub.update(&_vcontrol_mode);
+				if(_vcontrol_mode.flag_control_offboard_enabled){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 19.0f, 1.0f);
+						PX4_INFO("MPC Airspeed mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 19.0f, 0.0f);
+						PX4_INFO("MPC Airspeed mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Offboard Mode is NOT engaged");
+				}
+
+
+			}else if(!strcmp(argv[1], "mpc_altitude")){
+				uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
+				vehicle_control_mode_s	_vcontrol_mode {};
+				_vcontrol_mode_sub.update(&_vcontrol_mode);
+				if(_vcontrol_mode.flag_control_offboard_enabled){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 20.0f, 1.0f);
+						PX4_INFO("MPC Altitude mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 20.0f, 0.0f);
+						PX4_INFO("MPC Altitude mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Offboard Mode is NOT engaged");
+				}
+
+			}else if(!strcmp(argv[1], "mpc_ramp")){
+				uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
+				vehicle_control_mode_s	_vcontrol_mode {};
+				_vcontrol_mode_sub.update(&_vcontrol_mode);
+				if(_vcontrol_mode.flag_control_offboard_enabled){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 21.0f, 1.0f);
+						PX4_INFO("MPC Ramp mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 21.0f, 0.0f);
+						PX4_INFO("MPC Ramp mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Offboard Mode is NOT engaged");
+				}
+
+			}else if(!strcmp(argv[1], "land")){
+				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
+				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
+				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 22.0f, 1.0f);
+						PX4_INFO("Land mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 22.0f, 0.0f);
+						PX4_INFO("Land mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Lateral Control is NOT engaged");
 				}
 
 			}else if(!strcmp(argv[1], "reset")){
@@ -1139,6 +1242,21 @@ Commander::handle_command(const vehicle_command_s &cmd)
 				fw_custom_control_testing_setpoints_set.sideslip_step = cmd.param2;
 				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 				// PX4_INFO("Sideslip Setpoint is set to: \t%.2f",(double)fw_custom_control_testing_setpoints_set.sideslip_step);
+			}else if((int)cmd.param1 == 16){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_setpoints_set.mpc_airspeed_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+			}else if((int)cmd.param1 == 17){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_setpoints_set.mpc_altitude_step = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
+			}else if((int)cmd.param1 == 18){
+				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
+				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
+				fw_custom_control_testing_setpoints_set.mpc_altitude_ramp = cmd.param2;
+				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 			}else if((int)cmd.param1 == 7){ //Reset values to 0
 				fw_custom_control_testing_s fw_custom_control_testing_setpoints_set{};
 				fw_custom_control_testing_setpoints_set.timestamp = hrt_absolute_time();
@@ -1148,6 +1266,9 @@ Commander::handle_command(const vehicle_command_s &cmd)
 				fw_custom_control_testing_setpoints_set.roll_angle_step = 0.0f;
 				fw_custom_control_testing_setpoints_set.ct_err_step= 0.0f;
 				fw_custom_control_testing_setpoints_set.sideslip_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.mpc_airspeed_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.mpc_altitude_step = 0.0f;
+				fw_custom_control_testing_setpoints_set.mpc_altitude_ramp = 0.0f;
 				_fw_custom_control_testing_pub.publish(fw_custom_control_testing_setpoints_set);
 				// PX4_INFO("Reset Setpoints");
 			}else if((int)cmd.param1 == 8){
@@ -1208,11 +1329,47 @@ Commander::handle_command(const vehicle_command_s &cmd)
 				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_set{};
 				fw_custom_control_testing_lateral_set.timestamp = hrt_absolute_time();
 				if((int)cmd.param2 == 1){
-					fw_custom_control_testing_lateral_set.lateral_control = true;
+					fw_custom_control_testing_lateral_set.lateral_control_disable = true;
 				}else{
-					fw_custom_control_testing_lateral_set.lateral_control = false;
+					fw_custom_control_testing_lateral_set.lateral_control_disable = false;
 				}
 				_fw_custom_control_testing_lateral_pub.publish(fw_custom_control_testing_lateral_set);
+			}else if((int)cmd.param1 == 19){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.mpc_airspeed_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.mpc_airspeed_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 20){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.mpc_altitude_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.mpc_altitude_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 21){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.mpc_ramp_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.mpc_ramp_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 22){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.land_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.land_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
 			}else if((int)cmd.param1 == 15){
 				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
 				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
@@ -1222,6 +1379,10 @@ Commander::handle_command(const vehicle_command_s &cmd)
 				fw_custom_control_testing_mode_set.roll_angle_mode = false;
 				fw_custom_control_testing_mode_set.ct_mode = false;
 				fw_custom_control_testing_mode_set.sideslip_mode = false;
+				fw_custom_control_testing_mode_set.mpc_airspeed_mode = false;
+				fw_custom_control_testing_mode_set.mpc_altitude_mode = false;
+				fw_custom_control_testing_mode_set.mpc_ramp_mode = false;
+				fw_custom_control_testing_mode_set.land_mode = false;
 				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
 			}else{
 				PX4_INFO("VEHICLE_CMD_PUB_FW_CUST_SET wrong parameter invalid");
