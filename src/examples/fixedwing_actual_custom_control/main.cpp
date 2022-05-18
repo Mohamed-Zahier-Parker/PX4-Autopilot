@@ -826,9 +826,12 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
 		// std::copy(&Destinations[_loc_guide+1][0],&Destinations[_loc_guide+1][0]+1*2,&out[1][0]);//copy destination point coordinates into out array
             	out[1][0]=Destinations[_loc_guide+1][0];out[1][1]=Destinations[_loc_guide+1][1];
             	_loc_guide=_loc_guide+1;
+		waypoint_END=false;
 		}else
 		{
-		waypoint_END=true;//End waypoint navigation
+		if(land_init){
+			waypoint_END=true;//End waypoint navigation
+		}
 		// PX4_INFO("waypoint_END");
 		// std::copy(&Destinations[_loc_guide][0],&Destinations[_loc_guide][0]+1*2,&out[0][0]);//Update last starting point
 		out[0][0]=Destinations[_loc_guide][0];out[0][1]=Destinations[_loc_guide][1];
@@ -845,11 +848,13 @@ void Controllers::waypoint_scheduler(float Destinations[][2],int Destination_siz
 	// out[1][0]=Destinations[_loc_guide][0];out[1][1]=Destinations[_loc_guide][1];
 	if(_loc_guide==Destination_size){ //Going to land
 			// waypoint_END=true;
-		if(_x_guide>(L_track)){ //For continous looping
+		if(_x_guide>(L_track) && !land_init){ //For continous looping
 			//Reset waypoints
        			_loc_guide=1;
 			_x_guide=0;
 			PX4_INFO("Reset Waypoints");
+		}else if(land_init){
+			waypoint_END=true;
 		}
 	}
 	out[0][0]=Destinations[_loc_guide-1][0];out[0][1]=Destinations[_loc_guide-1][1];
@@ -1636,6 +1641,10 @@ void Controllers::Run()
 							_loc_guide = 1;
 						}
 						land_init = true;
+					}
+
+					if(!fw_custom_control_testing_modes.land_mode){
+						land_init = false;
 					}
 
 					//Navigation controller
