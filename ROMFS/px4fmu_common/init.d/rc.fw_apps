@@ -17,8 +17,11 @@ ekf2 start &
 # fw_pos_control_l1 start
 
 #custom controller
-ex_fixedwing_actual_custom_control start
-airspeed_selector_custom start
+# ex_fixedwing_actual_custom_control start
+# airspeed_selector_custom start
+
+ex_fixedwing_actual_custom_control_mod start
+airspeed_selector_custom_mod start
 
 
 # airspeed_selector start

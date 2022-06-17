@@ -162,13 +162,13 @@ public:
 	float yaw_controller(const Control_Data &state_data,float psi_ref,float psi_crab_error,const float dt);
 
 	void reset_integrators();
-	void vehicle_control_mode_poll();
+	// void vehicle_control_mode_poll();
 	void initialise_integrators(const Control_Data &state_data);
 	void state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3],const float dt);
 	void landing_point(Control_Data &state_data,float mp_pose[3],float mp_vel[3]);
 	float altitude_limit_intergrator_mpc(const Control_Data &state_data,float h_ref,const float dt);
 	float altitude_limit_intergrator_normal(const Control_Data &state_data,float h_ref,const float dt);
-	void mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]);
+	// void mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]);
 	float guidance_1_limited_intergrator(const Control_Data &state_data,float y_ref,const float dt);
 
 private:
@@ -222,7 +222,7 @@ private:
 	actuator_controls_s			actuators {};
 	vehicle_rates_setpoint_s		rates_sp {};
 	vehicle_local_position_s	_local_pos {};
-	vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
+	// vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
 	fw_controllers_sm_s			sm_state{};
 	mpc_inputs_s				mpc_ins{};
 	fw_custom_control_testing_states_s      fw_custom_control_testing_states{};

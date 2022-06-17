@@ -76,6 +76,7 @@ private:
 			msg.grd_vel = mpc_inputs_data.grd_vel;
 			msg.ramp_trajectory = mpc_inputs_data.ramp_trajectory;
 			msg.mpc_activate = mpc_inputs_data.mpc_activate;
+			msg.mpc_land = mpc_inputs_data.mpc_land;
 			mpc_inputs_updated = true;
 		}
 

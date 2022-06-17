@@ -83,14 +83,16 @@ px4_add_board(
 		#micrortps_bridge
 		navigator
 		rc_update
-		rover_pos_control
+		# rover_pos_control #Original had it uncommented
 		sensors
 		sih
 		temperature_compensation
-		uuv_att_control
-		uuv_pos_control
+		# uuv_att_control #Original had it uncommented
+		# uuv_pos_control #Original had it uncommented
 		vmount
-		vtol_att_control
+		# vtol_att_control #Original had it uncommented
+		airspeed_selector_custom_mod
+		fixedwing_actual_custom_control_mod
 	SYSTEMCMDS
 		bl_update
 		dmesg
@@ -134,6 +136,6 @@ px4_add_board(
 		#rover_steering_control # Rover example app
 		#uuv_example_app
 		#work_item
-		fixedwing_actual_custom_control
-		airspeed_selector_custom
+		# fixedwing_actual_custom_control
+		# airspeed_selector_custom
 	)

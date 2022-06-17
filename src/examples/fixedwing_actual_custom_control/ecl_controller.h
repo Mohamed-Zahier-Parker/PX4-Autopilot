@@ -96,6 +96,7 @@ struct Control_Data {
 	float vely_I;
 	float velz_I;
 	float hdot_bar_ref;
+	float psi_crab_error;
 };
 
 class ECL_Controller

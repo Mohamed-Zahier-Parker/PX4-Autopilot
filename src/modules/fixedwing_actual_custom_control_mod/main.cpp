@@ -200,35 +200,35 @@ int fixedwing_control_thread_main(int argc, char *argv[]);
 //static void usage(const char *reason);
 
 
-/**
- * Control roll and pitch angle.
- *
- * This very simple roll and pitch controller takes the current roll angle
- * of the system and compares it to a reference. Pitch is controlled to zero and yaw remains
- * uncontrolled (tutorial code, not intended for flight).
- *
- * @param att_sp The current attitude setpoint - the values the system would like to reach.
- * @param att The current attitude. The controller should make the attitude match the setpoint
- * @param rates_sp The angular rate setpoint. This is the output of the controller.
- */
-void control_attitude(const struct vehicle_attitude_setpoint_s *att_sp, const struct vehicle_attitude_s *att,
-		      struct vehicle_rates_setpoint_s *rates_sp,
-		      struct actuator_controls_s *actuators);
+// /**
+//  * Control roll and pitch angle.
+//  *
+//  * This very simple roll and pitch controller takes the current roll angle
+//  * of the system and compares it to a reference. Pitch is controlled to zero and yaw remains
+//  * uncontrolled (tutorial code, not intended for flight).
+//  *
+//  * @param att_sp The current attitude setpoint - the values the system would like to reach.
+//  * @param att The current attitude. The controller should make the attitude match the setpoint
+//  * @param rates_sp The angular rate setpoint. This is the output of the controller.
+//  */
+// void control_attitude(const struct vehicle_attitude_setpoint_s *att_sp, const struct vehicle_attitude_s *att,
+// 		      struct vehicle_rates_setpoint_s *rates_sp,
+// 		      struct actuator_controls_s *actuators);
 
-/**
- * Control heading.
- *
- * This very simple heading to roll angle controller outputs the desired roll angle based on
- * the current position of the system, the desired position (the setpoint) and the current
- * heading.
- *
- * @param pos The current position of the system
- * @param sp The current position setpoint
- * @param att The current attitude
- * @param att_sp The attitude setpoint. This is the output of the controller
- */
-void control_heading(const struct vehicle_global_position_s *pos, const struct position_setpoint_s *sp,
-		     const struct vehicle_attitude_s *att, struct vehicle_attitude_setpoint_s *att_sp);
+// /**
+//  * Control heading.
+//  *
+//  * This very simple heading to roll angle controller outputs the desired roll angle based on
+//  * the current position of the system, the desired position (the setpoint) and the current
+//  * heading.
+//  *
+//  * @param pos The current position of the system
+//  * @param sp The current position setpoint
+//  * @param att The current attitude
+//  * @param att_sp The attitude setpoint. This is the output of the controller
+//  */
+// void control_heading(const struct vehicle_global_position_s *pos, const struct position_setpoint_s *sp,
+// 		     const struct vehicle_attitude_s *att, struct vehicle_attitude_setpoint_s *att_sp);
 
 /**
  *Matrix Multiplication
@@ -249,76 +249,76 @@ static bool thread_should_exit = false;		/**< Daemon exit flag */
 static struct params p;
 static struct param_handles ph;
 
-void control_attitude(const struct vehicle_attitude_setpoint_s *att_sp, const struct vehicle_attitude_s *att,
-		      struct vehicle_rates_setpoint_s *rates_sp,
-		      struct actuator_controls_s *actuators)
-{
+// void control_attitude(const struct vehicle_attitude_setpoint_s *att_sp, const struct vehicle_attitude_s *att,
+// 		      struct vehicle_rates_setpoint_s *rates_sp,
+// 		      struct actuator_controls_s *actuators)
+// {
 
-	/*
-	 * The PX4 architecture provides a mixer outside of the controller.
-	 * The mixer is fed with a default vector of actuator controls, representing
-	 * moments applied to the vehicle frame. This vector
-	 * is structured as:
-	 *
-	 * Control Group 0 (attitude):
-	 *
-	 *    0  -  roll   (-1..+1)
-	 *    1  -  pitch  (-1..+1)
-	 *    2  -  yaw    (-1..+1)
-	 *    3  -  thrust ( 0..+1)
-	 *    4  -  flaps  (-1..+1)
-	 *    ...
-	 *
-	 * Control Group 1 (payloads / special):
-	 *
-	 *    ...
-	 */
+// 	/*
+// 	 * The PX4 architecture provides a mixer outside of the controller.
+// 	 * The mixer is fed with a default vector of actuator controls, representing
+// 	 * moments applied to the vehicle frame. This vector
+// 	 * is structured as:
+// 	 *
+// 	 * Control Group 0 (attitude):
+// 	 *
+// 	 *    0  -  roll   (-1..+1)
+// 	 *    1  -  pitch  (-1..+1)
+// 	 *    2  -  yaw    (-1..+1)
+// 	 *    3  -  thrust ( 0..+1)
+// 	 *    4  -  flaps  (-1..+1)
+// 	 *    ...
+// 	 *
+// 	 * Control Group 1 (payloads / special):
+// 	 *
+// 	 *    ...
+// 	 */
 
-	/*
-	 * Calculate roll error and apply P gain
-	 */
+// 	/*
+// 	 * Calculate roll error and apply P gain
+// 	 */
 
-	matrix::Eulerf att_euler = matrix::Quatf(att->q);
-	matrix::Eulerf att_sp_euler = matrix::Quatf(att_sp->q_d);
+// 	matrix::Eulerf att_euler = matrix::Quatf(att->q);
+// 	matrix::Eulerf att_sp_euler = matrix::Quatf(att_sp->q_d);
 
-	float roll_err = att_euler.phi() - att_sp_euler.phi();
-	actuators->control[0] = roll_err * p.roll_p;
+// 	float roll_err = att_euler.phi() - att_sp_euler.phi();
+// 	actuators->control[0] = roll_err * p.roll_p;
 
-	/*
-	 * Calculate pitch error and apply P gain
-	 */
-	float pitch_err = att_euler.theta() - att_sp_euler.theta();
-	actuators->control[1] = pitch_err * p.pitch_p;
-}
+// 	/*
+// 	 * Calculate pitch error and apply P gain
+// 	 */
+// 	float pitch_err = att_euler.theta() - att_sp_euler.theta();
+// 	actuators->control[1] = pitch_err * p.pitch_p;
+// }
 
-void control_heading(const struct vehicle_global_position_s *pos, const struct position_setpoint_s *sp,
-		     const struct vehicle_attitude_s *att, struct vehicle_attitude_setpoint_s *att_sp)
-{
+// void control_heading(const struct vehicle_global_position_s *pos, const struct position_setpoint_s *sp,
+// 		     const struct vehicle_attitude_s *att, struct vehicle_attitude_setpoint_s *att_sp)
+// {
 
-	/*
-	 * Calculate heading error of current position to desired position
-	 */
+// 	/*
+// 	 * Calculate heading error of current position to desired position
+// 	 */
 
-	float bearing = get_bearing_to_next_waypoint(pos->lat, pos->lon, sp->lat, sp->lon);
+// 	float bearing = get_bearing_to_next_waypoint(pos->lat, pos->lon, sp->lat, sp->lon);
 
-	matrix::Eulerf att_euler = matrix::Quatf(att->q);
+// 	matrix::Eulerf att_euler = matrix::Quatf(att->q);
 
-	/* calculate heading error */
-	float yaw_err = att_euler.psi() - bearing;
-	/* apply control gain */
-	float roll_body = yaw_err * p.hdng_p;
+// 	/* calculate heading error */
+// 	float yaw_err = att_euler.psi() - bearing;
+// 	/* apply control gain */
+// 	float roll_body = yaw_err * p.hdng_p;
 
-	/* limit output, this commonly is a tuning parameter, too */
-	if (roll_body < -0.6f) {
-		roll_body = -0.6f;
+// 	/* limit output, this commonly is a tuning parameter, too */
+// 	if (roll_body < -0.6f) {
+// 		roll_body = -0.6f;
 
-	} else if (att_sp->roll_body > 0.6f) {
-		roll_body = 0.6f;
-	}
+// 	} else if (att_sp->roll_body > 0.6f) {
+// 		roll_body = 0.6f;
+// 	}
 
-	matrix::Eulerf att_spe(roll_body, 0, bearing);
-	matrix::Quatf(att_spe).copyTo(att_sp->q_d);
-}
+// 	matrix::Eulerf att_spe(roll_body, 0, bearing);
+// 	matrix::Quatf(att_spe).copyTo(att_sp->q_d);
+// }
 
 
 void matrix_mult(float mat1[][10], float mat2[][10],float mat_mult[][10], int r1, int c1, int r2, int c2)
@@ -1000,7 +1000,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 				PX4_INFO("airspeed : \t%.4f ; hdot : \t%.4f ;  psi_crab_error : \t%.4f",(double)state_data.airspeed,(double)state_data.h_dot,(double)(state_data.psi_crab_error*(float)(180.0/M_PI)));
 				PX4_INFO("theta : \t%.4f ; phi : \t%.4f ; y : \t%.4f",(double)(state_data.theta*(float)(180/M_PI)),(double)(state_data.phi*(float)(180/M_PI)),(double)state_data.y);
 				PX4_INFO("herr :  \t%.4f",(double)abs((float)h_ref_SM-(-(float)state_data.posz)));
-                		if(state_data.airspeed>(float)15.00 && state_data.airspeed<(float)17.00 && state_data.h_dot>(float)-1.50 && abs(state_data.psi_crab_error)<(float)(8.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
+                		if(state_data.airspeed>(float)15.00 && state_data.airspeed<(float)17.00 && state_data.h_dot>(float)-1.50 && abs(state_data.psi_crab_error)<(float)(10.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(8.0/180*M_PI) && abs(state_data.y)<(float)1.50 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){//Decision 3
                     			state=3;//Pre-landing
 					PX4_INFO("state 3");
 					V_ground_check=V_ground;
@@ -1139,32 +1139,32 @@ void Controllers::landing_point(Control_Data &state_data,float mp_pose[3],float 
 
 }
 
-void Controllers::mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]){
-	for(int i=0;i<MPC_P;i++){
-		if(state>=2){
-			// if(i<MPC_P){
-			// 	mpc_ref[i]=h_ref+(i-1)*tan(-gamma)*MPC_Ts;
-			// }else{
-			// 	mpc_ref[i]=v_ref;
-			// }
-			mpc_ref[i*2]=h_ref+(i)*(float)tan(-gamma)*MPC_Ts; //!!! FIX: ADD vehicle ground velocity component!!!
-			mpc_ref[i*2+1]=v_ref;
-		}else{
-			// if(i<MPC_P){
-			// 	mpc_ref[i]=h_ref;
-			// }else{
-			// 	mpc_ref[i]=v_ref;
-			// }
-			mpc_ref[i*2]=h_ref;
-			mpc_ref[i*2+1]=v_ref;
-		}
-	}
-}
+// void Controllers::mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]){
+// 	for(int i=0;i<MPC_P;i++){
+// 		if(state>=2){
+// 			// if(i<MPC_P){
+// 			// 	mpc_ref[i]=h_ref+(i-1)*tan(-gamma)*MPC_Ts;
+// 			// }else{
+// 			// 	mpc_ref[i]=v_ref;
+// 			// }
+// 			mpc_ref[i*2]=h_ref+(i)*(float)tan(-gamma)*MPC_Ts; //!!! FIX: ADD vehicle ground velocity component!!!
+// 			mpc_ref[i*2+1]=v_ref;
+// 		}else{
+// 			// if(i<MPC_P){
+// 			// 	mpc_ref[i]=h_ref;
+// 			// }else{
+// 			// 	mpc_ref[i]=v_ref;
+// 			// }
+// 			mpc_ref[i*2]=h_ref;
+// 			mpc_ref[i*2+1]=v_ref;
+// 		}
+// 	}
+// }
 
-void Controllers::vehicle_control_mode_poll()
-{
-	_vcontrol_mode_sub.update(&_vcontrol_mode);
-}
+// void Controllers::vehicle_control_mode_poll()
+// {
+// 	_vcontrol_mode_sub.update(&_vcontrol_mode);
+// }
 
 int parameters_init(struct param_handles *handles)
 {
@@ -1218,7 +1218,7 @@ void Controllers::Run()
 
 	if (_att_sub.update(&att)) {
 
-	vehicle_control_mode_poll();
+	// vehicle_control_mode_poll();
 
 	/*Get commander state*/
 	commander_state_s com_state{};
@@ -1251,12 +1251,34 @@ void Controllers::Run()
 
 	// if(_vcontrol_mode.flag_control_position_enabled || _vcontrol_mode.flag_control_offboard_enabled){ //FIX CONTROL MODE
 
-	if(!_vcontrol_mode.flag_control_manual_enabled || (com_state.main_state == com_state.MAIN_STATE_POSCTL || com_state.main_state == com_state.MAIN_STATE_OFFBOARD || com_state.main_state == com_state.MAIN_STATE_ALTCTL || com_state.main_state == com_state.MAIN_STATE_ACRO)){ //FIX CONTROL MODE
+	if(vstatus.rc_signal_lost || (com_state.main_state == com_state.MAIN_STATE_POSCTL || com_state.main_state == com_state.MAIN_STATE_OFFBOARD || com_state.main_state == com_state.MAIN_STATE_ALTCTL || com_state.main_state == com_state.MAIN_STATE_AUTO_LOITER || com_state.main_state == com_state.MAIN_STATE_AUTO_RTL)){ //FIX CONTROL MODE
 
-	if(!_vcontrol_mode.flag_control_manual_enabled && !mcl_disp){
+	if(vstatus.rc_signal_lost && !mcl_disp){
 		// std::cout<<"Manual Control Signal Lost\n";
 		PX4_INFO("Manual Control Signal Lost");
 		mcl_disp=true;
+		//Reset modes and steps if manual controller is disconnected so autopilot circuits the airfield
+		//Reset Modes
+		vehicle_command_s veh_com_res_mode{};
+		veh_com_res_mode.command = vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET;
+		veh_com_res_mode.target_system = vstatus.system_id;
+		veh_com_res_mode.target_component = vstatus.component_id;
+		veh_com_res_mode.param1 = 15.0f;
+		veh_com_res_mode.param2 = 0.0f;
+		vehicle_command_pub.publish(veh_com_res_mode);
+		// PX4_INFO("Reset FW_Cust Modes");
+		//Reset Steps
+		vehicle_command_s veh_com_res_step{};
+		veh_com_res_step.command = vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET;
+		veh_com_res_step.target_system = vstatus.system_id;
+		veh_com_res_step.target_component = vstatus.component_id;
+		veh_com_res_step.param1 = 7.0f;
+		veh_com_res_step.param2 = 0.0f;
+		vehicle_command_pub.publish(veh_com_res_step);
+		// PX4_INFO("Reset FW_Cust Setpoints");
+	}else if(!vstatus.rc_signal_lost){
+		mcl_disp=false;
+		// PX4_INFO("Manual Control Signal Regained");
 	}
 
 	// airspeed_validated_s airspeed;
@@ -1274,7 +1296,7 @@ void Controllers::Run()
 			parameters_update(&ph, &p);
 		}
 
-		bool global_sp_updated=global_sp_sub.updated();
+		// bool global_sp_updated=global_sp_sub.updated();
 		//bool manual_control_setpoint_updated=manual_control_setpoint_sub.updated();
 
 		// const float dt = math::constrain((airspeed.timestamp - _last_run) * 1e-6f, 0.002f, 0.4f);
@@ -1292,8 +1314,8 @@ void Controllers::Run()
 
 		/*get local copy of estimator states*/
 				//orb_copy(ORB_ID(estimator_states), estim_sub, &estim);
-		estimator_status_s estim{};
-		estim_sub.copy(&estim);
+		// estimator_status_s estim{};
+		// estim_sub.copy(&estim);
 
 		/*get local copy of angular velocity states*/
 				// orb_copy(ORB_ID(vehicle_angular_velocity), ang_vel_sub, &ang_vel);
@@ -1312,8 +1334,8 @@ void Controllers::Run()
 		// airspeed_s airspeed;
 		// airspeed_sub.copy(&airspeed);
 
-		airspeed_s airspeed_sens;
-		airspeed_sens_sub.copy(&airspeed_sens);
+		// airspeed_s airspeed_sens;
+		// airspeed_sens_sub.copy(&airspeed_sens);
 
 		moving_platform_s moving_platform{};
 		_mov_plat_sub.copy(&moving_platform);
@@ -1435,13 +1457,13 @@ void Controllers::Run()
 			// std::cout<<"Airspeed : "<<airspeed_sens.true_airspeed_m_s<<"\n";
 		// }
 
-				if (global_sp_updated) {
-					// struct position_setpoint_triplet_s triplet;
-					// orb_copy(ORB_ID(position_setpoint_triplet), global_sp_sub, &triplet);
-					// memcpy(&global_sp, &triplet.current, sizeof(global_sp));
-					position_setpoint_triplet_s triplet{};
-					global_sp_sub.copy(&triplet);
-				}
+				// if (global_sp_updated) {
+				// 	// struct position_setpoint_triplet_s triplet;
+				// 	// orb_copy(ORB_ID(position_setpoint_triplet), global_sp_sub, &triplet);
+				// 	// memcpy(&global_sp, &triplet.current, sizeof(global_sp));
+				// 	position_setpoint_triplet_s triplet{};
+				// 	global_sp_sub.copy(&triplet);
+				// }
 
 
 				/* get the system status and the flight mode we're in */
@@ -1621,7 +1643,7 @@ void Controllers::Run()
 					// float destinations[][2]={{0,0},{200,0},{200,250},{-500,250},{-500,0},{-350,0},{TD_position[1],TD_position[0]}};//HRF Gazebo x direction Waypoints
 					// float destinations[][2]={{0,0},{0,200},{-250,200},{-250,-500},{0,-500},{0,-350},{TD_position[1],TD_position[0]}};//HRF North Waypoints
 					// float destinations[][2]={{0.0f,0.0f},{-54.7573,192.3581},{-295.2049,123.9115},{-103.5545,-549.3419},{136.8932,-480.8953},{95.8252,-336.6267},{0.0f,0.0f}};//HRF Runway Aligned Waypoints
-					float destinations[][2]={{0.0f,0.0f},{-55.5401,192.1336},{-295.7070,122.7085},{-198.5119,-213.5252},{-101.3168,-549.7590},{138.8502,-480.3339},{97.1951,-336.2337},{0.0f,0.0f}};//HRF Runway Aligned Waypoints Actual (added extra waypoint for capture)
+					float destinations[8][2]={{0.0f,0.0f},{-55.5401,192.1336},{-295.7070,122.7085},{-198.5119,-213.5252},{-101.3168,-549.7590},{138.8502,-480.3339},{97.1951,-336.2337},{0.0f,0.0f}};//HRF Runway Aligned Waypoints Actual (added extra waypoint for capture)
 
 					int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
 
@@ -1653,6 +1675,7 @@ void Controllers::Run()
 						if((fw_custom_control_testing_modes.land_mode || fw_custom_control_testing_modes.mpc_land_mode) && _loc_guide>=6){ //Reset if waypoint capture to close to land point
 							PX4_INFO("Waypoint \t%d is too close to land point, therefore Waypoint Choosen as Source is: 0",_loc_guide-1);
 							_loc_guide = 1;
+							_x_guide=0;
 						}
 						land_init = true;
 					}
@@ -1822,17 +1845,17 @@ void Controllers::Run()
 				//!!!CHECK BELOW!!!
 
 				/* Gazebo axes compensation for SIMULATION*/
-				dA=-dA;
-				dE=-dE;
-				dR=-dR;
-				dF=-dF;
+				// dA=-dA;
+				// dE=-dE;
+				// dR=-dR;
+				// dF=-dF;
 
 				/* Compensating for phyical control surface deformation for PIXHAWK 4 CODE*/
-				// dA=-dA * (float) 2.223525;
-				// dE=-dE * (float)1.8193;// Scaler is for controller only
-				// // dT=dT;
-				// dR=-dR * (float)1.60315;
-				// dF=-dF * (float) 2.5331025;
+				dA=-dA * (float) 2.223525;
+				dE=-dE * (float)1.8193;// Scaler is for controller only
+				// dT=dT;
+				dR=-dR * (float)1.60315;
+				dF=-dF * (float) 2.5331025;
 
 				//If Landed
 				// if(state==6 || control_input.posz>=(float)0.1){
@@ -1985,9 +2008,9 @@ void Controllers::Run()
 				// }
 
 
-				publish_roll=control_input.phi;
-				publish_pitch=control_input.theta;
-				publish_yaw=control_input.psi;
+				// publish_roll=control_input.phi;
+				// publish_pitch=control_input.theta;
+				// publish_yaw=control_input.psi;
 
 
 				//print deflection commands
@@ -2081,7 +2104,6 @@ void Controllers::Run()
 			state=0;Abort=false;Anti_Abort=false;
 			waypoint_capture = false;
 			land_init = false;
-			//TODO: ADD commander mode and steps reset here
 			//Reset Modes
 			vehicle_command_s veh_com_res_mode{};
 			veh_com_res_mode.command = vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET;
@@ -2090,7 +2112,7 @@ void Controllers::Run()
 			veh_com_res_mode.param1 = 15.0f;
 			veh_com_res_mode.param2 = 0.0f;
 			vehicle_command_pub.publish(veh_com_res_mode);
-			PX4_INFO("Reset FW_Cust Modes");
+			// PX4_INFO("Reset FW_Cust Modes");
 			//Reset Steps
 			vehicle_command_s veh_com_res_step{};
 			veh_com_res_step.command = vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET;
@@ -2099,7 +2121,7 @@ void Controllers::Run()
 			veh_com_res_step.param1 = 7.0f;
 			veh_com_res_step.param2 = 0.0f;
 			vehicle_command_pub.publish(veh_com_res_step);
-			PX4_INFO("Reset FW_Cust Setpoints");
+			// PX4_INFO("Reset FW_Cust Setpoints");
 		}
 		manual_mode=true;
 		controllers_activate=false;
@@ -2136,8 +2158,8 @@ void Controllers::Run()
 		dE_pub=-manual_control_setpoint.x * _param_fw_man_p_sc.get() + _param_trim_pitch.get();
 		dR_pub=manual_control_setpoint.r * _param_fw_man_y_sc.get() + _param_trim_yaw.get();
 		dT_pub=math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
-		dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
-		// dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
+		// dF_pub=0;//!!!ADD MANUAL CONTROL FOR FLAPS!!!
+		dF_pub = 0.5f * (-manual_control_setpoint.flaps - 1.0f) * _param_fw_flaps_scl.get();
 
 		}
 

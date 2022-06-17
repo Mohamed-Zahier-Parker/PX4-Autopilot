@@ -101,6 +101,7 @@
 #include <uORB/topics/fw_custom_control_testing_lateral.h>
 #include <uORB/topics/fw_custom_control_testing_states.h>
 #include <uORB/topics/vehicle_gps_position.h>
+#include <uORB/topics/vehicle_status_flags.h>
 
 //Graph plotting
 // #include <iostream>
@@ -161,13 +162,13 @@ public:
 	float yaw_controller(const Control_Data &state_data,float psi_ref,float psi_crab_error,const float dt);
 
 	void reset_integrators();
-	void vehicle_control_mode_poll();
+	// void vehicle_control_mode_poll();
 	void initialise_integrators(const Control_Data &state_data);
 	void state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3],const float dt);
 	void landing_point(Control_Data &state_data,float mp_pose[3],float mp_vel[3]);
 	float altitude_limit_intergrator_mpc(const Control_Data &state_data,float h_ref,const float dt);
 	float altitude_limit_intergrator_normal(const Control_Data &state_data,float h_ref,const float dt);
-	void mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]);
+	// void mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]);
 	float guidance_1_limited_intergrator(const Control_Data &state_data,float y_ref,const float dt);
 
 private:
@@ -206,6 +207,7 @@ private:
 	uORB::Subscription _fw_custom_control_testing_modes_sub{ORB_ID(fw_custom_control_testing_mode)};
 	uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
 	uORB::Subscription gps_pos_sub{ORB_ID(vehicle_gps_position)};
+	uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
@@ -220,7 +222,7 @@ private:
 	actuator_controls_s			actuators {};
 	vehicle_rates_setpoint_s		rates_sp {};
 	vehicle_local_position_s	_local_pos {};
-	vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
+	// vehicle_control_mode_s			_vcontrol_mode {};	/**< vehicle control mode */
 	fw_controllers_sm_s			sm_state{};
 	mpc_inputs_s				mpc_ins{};
 	fw_custom_control_testing_states_s      fw_custom_control_testing_states{};
@@ -228,7 +230,7 @@ private:
 	perf_counter_t	_loop_perf;
 
 	//Control Data memory
-	float y_old=0,ydot_old=0;
+	float y_old=0,ydot_old=0,psi_crab_error_old=0.0f;
 
 	int disp_count=0;
 	int disp_count_ctrl=0;
@@ -255,8 +257,8 @@ private:
 	float TD_position[3]={0.00,0.00,0.00};//Touch Down point
 
 	// MPC
-	int MPC_P=30;//choose
-	float MPC_Ts=0.12;//choose
+	int MPC_P=25;//choose
+	float MPC_Ts=0.1;//choose
 	float MPC_num_inputs=2;
 	float mpc_ref_in[2]={0,0};
 	float mpc_h=0;

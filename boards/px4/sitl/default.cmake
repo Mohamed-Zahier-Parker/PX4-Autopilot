@@ -24,7 +24,7 @@ px4_add_board(
 		tone_alarm
 		#uavcan
 	MODULES
-		airship_att_control
+		airship_att_control #Original had it uncommented
 		# airspeed_selector #Original had it uncommented
 		attitude_estimator_q
 		camera_feedback
@@ -51,15 +51,17 @@ px4_add_board(
 		navigator
 		rc_update
 		replay
-		rover_pos_control
+		rover_pos_control #Original had it uncommented
 		sensors
 		#sih
 		simulator
 		temperature_compensation
-		uuv_att_control
-		uuv_pos_control
+		uuv_att_control #Original had it uncommented
+		uuv_pos_control #Original had it uncommented
 		vmount
-		vtol_att_control
+		vtol_att_control #Original had it uncommented
+		airspeed_selector_custom_mod
+		fixedwing_actual_custom_control_mod
 	SYSTEMCMDS
 		#dumpfile
 		dyn
@@ -99,8 +101,8 @@ px4_add_board(
 		rover_steering_control # Rover example app
 		uuv_example_app
 		work_item
-		fixedwing_actual_custom_control
-		airspeed_selector_custom
+		# fixedwing_actual_custom_control
+		# airspeed_selector_custom
 	)
 
 set(config_sitl_viewer jmavsim CACHE STRING "viewer for sitl")

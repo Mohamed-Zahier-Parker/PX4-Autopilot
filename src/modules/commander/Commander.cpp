@@ -501,6 +501,8 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("MPC Ramp Mode : \t%s",fw_custom_control_testing_modes.mpc_ramp_mode ? "true" : "false");
 			}else if(!strcmp(argv[1], "land")){
 				PX4_INFO("Land Mode : \t%s",fw_custom_control_testing_modes.land_mode ? "true" : "false");
+			}else if(!strcmp(argv[1], "mpc_land")){
+				PX4_INFO("MPC Land Mode : \t%s",fw_custom_control_testing_modes.mpc_land_mode ? "true" : "false");
 			}else if(!strcmp(argv[1], "all")){
 				PX4_INFO("Airspeed Mode : \t%s",fw_custom_control_testing_modes.airspeed_mode ? "true" : "false");
 				PX4_INFO("Climbrate Mode : \t%s",fw_custom_control_testing_modes.climbrate_mode ? "true" : "false");
@@ -513,6 +515,7 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("MPC Altitude Mode : \t%s",fw_custom_control_testing_modes.mpc_altitude_mode ? "true" : "false");
 				PX4_INFO("MPC Ramp Mode : \t%s",fw_custom_control_testing_modes.mpc_ramp_mode ? "true" : "false");
 				PX4_INFO("Land Mode : \t%s",fw_custom_control_testing_modes.land_mode ? "true" : "false");
+				PX4_INFO("MPC Land Mode : \t%s",fw_custom_control_testing_modes.mpc_land_mode ? "true" : "false");
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
 			}
@@ -645,10 +648,14 @@ int Commander::custom_command(int argc, char *argv[])
 				}
 
 			}else if(!strcmp(argv[1], "mpc_airspeed")){
-				uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
-				vehicle_control_mode_s	_vcontrol_mode {};
-				_vcontrol_mode_sub.update(&_vcontrol_mode);
-				if(_vcontrol_mode.flag_control_offboard_enabled){
+				// uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
+				// vehicle_control_mode_s	_vcontrol_mode {};
+				// _vcontrol_mode_sub.update(&_vcontrol_mode);
+				// if(_vcontrol_mode.flag_control_offboard_enabled){
+				uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
+				vehicle_status_flags_s veh_status_flgs{};
+				veh_status_flgs_sub.copy(&veh_status_flgs);
+				if(!veh_status_flgs.offboard_control_signal_lost){
 					if(!strcmp(argv[2], "enable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 19.0f, 1.0f);
 						PX4_INFO("MPC Airspeed mode is enabled");
@@ -659,15 +666,19 @@ int Commander::custom_command(int argc, char *argv[])
 						PX4_ERR("argument %s unsupported.", argv[2]);
 					}
 				}else{
-					PX4_INFO("Offboard Mode is NOT engaged");
+					PX4_INFO("MPC computer NO signal");
 				}
+
+				// }else{
+				// 	PX4_INFO("Offboard Mode is NOT engaged");
+				// }
 
 
 			}else if(!strcmp(argv[1], "mpc_altitude")){
-				uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
-				vehicle_control_mode_s	_vcontrol_mode {};
-				_vcontrol_mode_sub.update(&_vcontrol_mode);
-				if(_vcontrol_mode.flag_control_offboard_enabled){
+				uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
+				vehicle_status_flags_s veh_status_flgs{};
+				veh_status_flgs_sub.copy(&veh_status_flgs);
+				if(!veh_status_flgs.offboard_control_signal_lost){
 					if(!strcmp(argv[2], "enable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 20.0f, 1.0f);
 						PX4_INFO("MPC Altitude mode is enabled");
@@ -678,14 +689,14 @@ int Commander::custom_command(int argc, char *argv[])
 						PX4_ERR("argument %s unsupported.", argv[2]);
 					}
 				}else{
-					PX4_INFO("Offboard Mode is NOT engaged");
+					PX4_INFO("MPC computer NO signal");
 				}
 
 			}else if(!strcmp(argv[1], "mpc_ramp")){
-				uORB::Subscription _vcontrol_mode_sub{ORB_ID(vehicle_control_mode)};
-				vehicle_control_mode_s	_vcontrol_mode {};
-				_vcontrol_mode_sub.update(&_vcontrol_mode);
-				if(_vcontrol_mode.flag_control_offboard_enabled){
+				uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
+				vehicle_status_flags_s veh_status_flgs{};
+				veh_status_flgs_sub.copy(&veh_status_flgs);
+				if(!veh_status_flgs.offboard_control_signal_lost){
 					if(!strcmp(argv[2], "enable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 21.0f, 1.0f);
 						PX4_INFO("MPC Ramp mode is enabled");
@@ -696,7 +707,7 @@ int Commander::custom_command(int argc, char *argv[])
 						PX4_ERR("argument %s unsupported.", argv[2]);
 					}
 				}else{
-					PX4_INFO("Offboard Mode is NOT engaged");
+					PX4_INFO("MPC computer NO signal");
 				}
 
 			}else if(!strcmp(argv[1], "land")){
@@ -715,6 +726,27 @@ int Commander::custom_command(int argc, char *argv[])
 					}
 				}else{
 					PX4_INFO("Lateral Control is NOT engaged");
+				}
+
+			}else if(!strcmp(argv[1], "mpc_land")){
+				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
+				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
+				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
+				uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
+				vehicle_status_flags_s veh_status_flgs{};
+				veh_status_flgs_sub.copy(&veh_status_flgs);
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable && !veh_status_flgs.offboard_control_signal_lost){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 23.0f, 1.0f);
+						PX4_INFO("MPC Land mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 23.0f, 0.0f);
+						PX4_INFO("MPC Land mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Lateral Control is NOT engaged OR MPC computer NO signal");
 				}
 
 			}else if(!strcmp(argv[1], "reset")){
@@ -1370,6 +1402,15 @@ Commander::handle_command(const vehicle_command_s &cmd)
 					fw_custom_control_testing_mode_set.land_mode = false;
 				}
 				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 23){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.mpc_land_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.mpc_land_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
 			}else if((int)cmd.param1 == 15){
 				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
 				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
@@ -1383,6 +1424,7 @@ Commander::handle_command(const vehicle_command_s &cmd)
 				fw_custom_control_testing_mode_set.mpc_altitude_mode = false;
 				fw_custom_control_testing_mode_set.mpc_ramp_mode = false;
 				fw_custom_control_testing_mode_set.land_mode = false;
+				fw_custom_control_testing_mode_set.mpc_land_mode = false;
 				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
 			}else{
 				PX4_INFO("VEHICLE_CMD_PUB_FW_CUST_SET wrong parameter invalid");

@@ -33,7 +33,8 @@
 px4_add_module(
 	MODULE examples__fixedwing_actual_custom_control
 	MAIN ex_fixedwing_actual_custom_control
-	STACK_MAX 1300
+	STACK_MAIN 2500
+	STACK_MAX 4000
 	SRCS
 		main.cpp
 	DEPENDS

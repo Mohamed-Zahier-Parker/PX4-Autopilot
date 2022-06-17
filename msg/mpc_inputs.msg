@@ -12,3 +12,5 @@ float32 grd_vel 			#Ground Velocity of UAV
 int8 ramp_trajectory       		#MPC altitude ramp altitude trajectory
 
 int8 mpc_activate       		#MPC activation
+
+int8 mpc_land       			#MPC Land mode activation
