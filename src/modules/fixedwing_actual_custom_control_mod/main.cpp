@@ -2087,6 +2087,8 @@ void Controllers::Run()
 				fw_custom_control_testing_states.x_it = _x_guide;
 				fw_custom_control_testing_states.l_t = L_track;
 				fw_custom_control_testing_states.theta = control_input.theta;
+				fw_custom_control_testing_states.mpc_out_hdotref = mpc_out.mpc_mv_out[0];
+				fw_custom_control_testing_states.mpc_out_dt = mpc_out.mpc_mv_out[1];
 				_fw_custom_control_testing_states_pub.publish(fw_custom_control_testing_states);
 
 	}

@@ -26,3 +26,5 @@ float32 sm_state			#State Machine State
 float32 x_it				#x intrack state
 float32 l_t				#L_track maximum intrack distance
 float32 theta                           #pitch angle
+float32 mpc_out_hdotref			#MPC hdot ref command
+float32 mpc_out_dt			#MPC dT(thrust) command
