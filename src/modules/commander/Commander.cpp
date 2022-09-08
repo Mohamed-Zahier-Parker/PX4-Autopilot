@@ -365,6 +365,113 @@ int Commander::custom_command(int argc, char *argv[])
 		}
 	}
 
+	if (!strcmp(argv[0], "fw_cust_status")) {
+		if (argc > 1) {
+			if(!strcmp(argv[1], "gps_rel")){
+				uORB::Subscription _mp_rel_dist_sub{ORB_ID(mp_relative_dist)};
+				mp_relative_dist_s mp_rel{};
+				_mp_rel_dist_sub.copy(&mp_rel);
+				PX4_INFO("GPS Rel_N: \t%.2f",(double)mp_rel.mp_rel_n);
+				PX4_INFO("GPS Rel_E: \t%.2f",(double)mp_rel.mp_rel_e);
+				PX4_INFO("GPS Rel_D: \t%.2f",(double)mp_rel.mp_rel_d);
+			}else if(!strcmp(argv[1], "mp")){
+				uORB::Subscription _mp_sim_sub{ORB_ID(moving_platform_simulated)};
+				moving_platform_simulated_s mp_sim{};
+				_mp_sim_sub.copy(&mp_sim);
+				PX4_INFO("mp_pose_x: \t%.2f ; mp_pose_y: \t%.2f ; mp_pose_z: \t%.2f",(double)mp_sim.mp_sim_pose[0],(double)mp_sim.mp_sim_pose[1],(double)mp_sim.mp_sim_pose[2]);
+				PX4_INFO("mp_vel_x: \t%.2f ; mp_vel_y: \t%.2f ; mp_vel_z: \t%.2f",(double)mp_sim.mp_sim_vel[0],(double)mp_sim.mp_sim_vel[1],(double)mp_sim.mp_sim_vel[2]);
+				PX4_INFO("TD_x: \t%.2f ; TD_y: \t%.2f ; TD_z: \t%.2f",(double)mp_sim.td_point[0],(double)mp_sim.td_point[1],(double)mp_sim.td_point[2]);
+			}else if(!strcmp(argv[1], "sm")){
+				uORB::Subscription _fw_cus_sm_sub{ORB_ID(fw_custom_sm_status)};
+				fw_custom_sm_status_s fw_cust_sm{};
+				_fw_cus_sm_sub.copy(&fw_cust_sm);
+				PX4_INFO("SM_State : \t%.2f",(double)fw_cust_sm.state);
+				PX4_INFO("Abort : \t%s",fw_cust_sm.abort ? "true" : "false");
+				PX4_INFO("Go Around Land : \t%s",fw_cust_sm.gal ? "true" : "false");
+				PX4_INFO("Virtual Platform Altitude : \t%.2f",(double)fw_cust_sm.virt_plat_alt);
+			}else if(!strcmp(argv[1], "options")){
+				uORB::Subscription _fw_cus_opt_sub{ORB_ID(fw_custom_options)};
+				fw_custom_options_s fw_cust_opt_in{};
+				_fw_cus_opt_sub.copy(&fw_cust_opt_in);
+				PX4_INFO("Decrab MP : \t%s",fw_cust_opt_in.decrab_mp ? "true" : "false");
+				PX4_INFO("Virtual Car : \t%s",fw_cust_opt_in.virtual_car ? "true" : "false");
+				PX4_INFO("Decrab Runway : \t%s",fw_cust_opt_in.decrab_runway ? "true" : "false");
+				PX4_INFO("Virtual Platform Adjustment : \t%.2f",(double)fw_cust_opt_in.vp_alt_adjust);
+				PX4_INFO("Landing Predictor Relative GPS Velocity : \t%s",fw_cust_opt_in.lp_rel_vel ? "true" : "false");
+			}else {
+				PX4_ERR("argument %s unsupported.", argv[1]);
+			}
+
+			return 0;
+		}else{
+			PX4_ERR("missing argument");
+		}
+
+	}
+
+	if (!strcmp(argv[0], "fw_cust_opt")) {
+		if (argc > 1) {
+			if(!strcmp(argv[1], "decrab_mp")){
+				if(!strcmp(argv[2], "enable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 26.0f, 1.0f);
+					PX4_INFO("Decrab moving platform mode is enabled (!! DECRAB !!)");
+				}else if(!strcmp(argv[2], "disable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 26.0f, 0.0f);
+					PX4_INFO("Decrab moving platform mode is disabled (!! NO DECRAB !!)");
+				}else{
+					PX4_ERR("argument %s unsupported.", argv[2]);
+				}
+			}else if(!strcmp(argv[1], "virtual_car")){
+				if(!strcmp(argv[2], "enable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 27.0f, 1.0f);
+					PX4_INFO("Virtual car mode is enabled");
+				}else if(!strcmp(argv[2], "disable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 27.0f, 0.0f);
+					PX4_INFO("Virtual car mode is disabled");
+				}else{
+					PX4_ERR("argument %s unsupported.", argv[2]);
+				}
+			}else if(!strcmp(argv[1], "decrab_runway")){
+				if(!strcmp(argv[2], "enable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 28.0f, 1.0f);
+					PX4_INFO("Decrab Runway Option mode is enabled (!! NO DECRAB !!)");
+				}else if(!strcmp(argv[2], "disable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 28.0f, 0.0f);
+					PX4_INFO("Decrab Runway Option mode is disabled (!! DECRAB !!)");
+				}else{
+					PX4_ERR("argument %s unsupported.", argv[2]);
+				}
+			}else if(!strcmp(argv[1], "vp_adj")){
+				if(atof(argv[2])>=0){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 30.0f, atof(argv[2]));
+					PX4_INFO("Virtual Platform Altitude Adjustment is set to: \t%.2f",(double)atof(argv[2]));
+				}else{
+					PX4_INFO("argument %s unsupported.", argv[2]);
+				}
+			}else if(!strcmp(argv[1], "lp_relvel")){
+				if(!strcmp(argv[2], "enable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 31.0f, 1.0f);
+					PX4_INFO("Landing Predictor Relative Velocity mode is enabled");
+				}else if(!strcmp(argv[2], "disable")){
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 31.0f, 0.0f);
+					PX4_INFO("Landing Predictor Relative Velocity mode is disabled");
+				}else{
+					PX4_ERR("argument %s unsupported.", argv[2]);
+				}
+			}else if(!strcmp(argv[1], "reset")){
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 29.0f, 0.0f);
+				PX4_INFO("Fw Custom Options Reset");
+			}else {
+				PX4_ERR("argument %s unsupported.", argv[1]);
+			}
+
+			return 0;
+		}else{
+			PX4_ERR("missing argument");
+		}
+
+	}
+
 	if (!strcmp(argv[0], "fw_cust_step_get")) {
 		if (argc > 1) {
 			uORB::Subscription _fw_custom_control_testing_sub{ORB_ID(fw_custom_control_testing)};
@@ -503,6 +610,10 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("Land Mode : \t%s",fw_custom_control_testing_modes.land_mode ? "true" : "false");
 			}else if(!strcmp(argv[1], "mpc_land")){
 				PX4_INFO("MPC Land Mode : \t%s",fw_custom_control_testing_modes.mpc_land_mode ? "true" : "false");
+			}else if(!strcmp(argv[1], "mvland")){
+				PX4_INFO("Moving Platform Land Mode : \t%s",fw_custom_control_testing_modes.mvland_mode ? "true" : "false");
+			}else if(!strcmp(argv[1], "mpc_mvland")){
+				PX4_INFO("MPC Moving Platform Land Mode : \t%s",fw_custom_control_testing_modes.mpc_mvland_mode ? "true" : "false");
 			}else if(!strcmp(argv[1], "all")){
 				PX4_INFO("Airspeed Mode : \t%s",fw_custom_control_testing_modes.airspeed_mode ? "true" : "false");
 				PX4_INFO("Climbrate Mode : \t%s",fw_custom_control_testing_modes.climbrate_mode ? "true" : "false");
@@ -516,6 +627,8 @@ int Commander::custom_command(int argc, char *argv[])
 				PX4_INFO("MPC Ramp Mode : \t%s",fw_custom_control_testing_modes.mpc_ramp_mode ? "true" : "false");
 				PX4_INFO("Land Mode : \t%s",fw_custom_control_testing_modes.land_mode ? "true" : "false");
 				PX4_INFO("MPC Land Mode : \t%s",fw_custom_control_testing_modes.mpc_land_mode ? "true" : "false");
+				PX4_INFO("Moving Platform Land Mode : \t%s",fw_custom_control_testing_modes.mvland_mode ? "true" : "false");
+				PX4_INFO("MPC Moving Platform Land Mode : \t%s",fw_custom_control_testing_modes.mpc_mvland_mode ? "true" : "false");
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
 			}
@@ -742,6 +855,45 @@ int Commander::custom_command(int argc, char *argv[])
 					}else if(!strcmp(argv[2], "disable")){
 						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 23.0f, 0.0f);
 						PX4_INFO("MPC Land mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Lateral Control is NOT engaged OR MPC computer NO signal");
+				}
+
+			}else if(!strcmp(argv[1], "mvland")){
+				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
+				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
+				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 24.0f, 1.0f);
+						PX4_INFO("Moving Platform Land mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 24.0f, 0.0f);
+						PX4_INFO("Moving Platform Land mode is disabled");
+					}else{
+						PX4_ERR("argument %s unsupported.", argv[2]);
+					}
+				}else{
+					PX4_INFO("Lateral Control is NOT engaged");
+				}
+
+			}else if(!strcmp(argv[1], "mpc_mvland")){
+				uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
+				fw_custom_control_testing_lateral_s fw_custom_control_testing_lateral_state{};
+				_fw_custom_control_testing_lateral_sub.copy(&fw_custom_control_testing_lateral_state);
+				uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
+				vehicle_status_flags_s veh_status_flgs{};
+				veh_status_flgs_sub.copy(&veh_status_flgs);
+				if(!fw_custom_control_testing_lateral_state.lateral_control_disable && !veh_status_flgs.offboard_control_signal_lost){
+					if(!strcmp(argv[2], "enable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 25.0f, 1.0f);
+						PX4_INFO("MPC Moving Platform Land mode is enabled");
+					}else if(!strcmp(argv[2], "disable")){
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PUB_FW_CUST_SET, 25.0f, 0.0f);
+						PX4_INFO("MPC Moving Platform Land mode is disabled");
 					}else{
 						PX4_ERR("argument %s unsupported.", argv[2]);
 					}
@@ -1411,6 +1563,104 @@ Commander::handle_command(const vehicle_command_s &cmd)
 					fw_custom_control_testing_mode_set.mpc_land_mode = false;
 				}
 				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 24){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.mvland_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.mvland_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 25){
+				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
+				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_custom_control_testing_mode_set.mpc_mvland_mode = true;
+				}else{
+					fw_custom_control_testing_mode_set.mpc_mvland_mode = false;
+				}
+				_fw_custom_control_testing_mode_pub.publish(fw_custom_control_testing_mode_set);
+			}else if((int)cmd.param1 == 26){
+				fw_custom_options_s fw_cust_opt_in{};
+				_fw_cus_opt_sub.copy(&fw_cust_opt_in);
+				fw_custom_options_s fw_cust_opt_out{};
+				fw_cust_opt_out.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_cust_opt_out.decrab_mp = true;
+				}else{
+					fw_cust_opt_out.decrab_mp = false;
+				}
+				fw_cust_opt_out.virtual_car = fw_cust_opt_in.virtual_car;
+				fw_cust_opt_out.decrab_runway = fw_cust_opt_in.decrab_runway;
+				fw_cust_opt_out.vp_alt_adjust = fw_cust_opt_in.vp_alt_adjust;
+				fw_cust_opt_out.lp_rel_vel = fw_cust_opt_in.lp_rel_vel;
+				_fw_cust_opt_pub.publish(fw_cust_opt_out);
+			}else if((int)cmd.param1 == 27){
+				fw_custom_options_s fw_cust_opt_in{};
+				_fw_cus_opt_sub.copy(&fw_cust_opt_in);
+				fw_custom_options_s fw_cust_opt_out{};
+				fw_cust_opt_out.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_cust_opt_out.virtual_car = true;
+				}else{
+					fw_cust_opt_out.virtual_car = false;
+				}
+				fw_cust_opt_out.decrab_mp = fw_cust_opt_in.decrab_mp;
+				fw_cust_opt_out.decrab_runway = fw_cust_opt_in.decrab_runway;
+				fw_cust_opt_out.vp_alt_adjust = fw_cust_opt_in.vp_alt_adjust;
+				fw_cust_opt_out.lp_rel_vel = fw_cust_opt_in.lp_rel_vel;
+				_fw_cust_opt_pub.publish(fw_cust_opt_out);
+			}else if((int)cmd.param1 == 28){
+				fw_custom_options_s fw_cust_opt_in{};
+				_fw_cus_opt_sub.copy(&fw_cust_opt_in);
+				fw_custom_options_s fw_cust_opt_out{};
+				fw_cust_opt_out.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_cust_opt_out.decrab_runway = true;
+				}else{
+					fw_cust_opt_out.decrab_runway = false;
+				}
+				fw_cust_opt_out.decrab_mp = fw_cust_opt_in.decrab_mp;
+				fw_cust_opt_out.virtual_car = fw_cust_opt_in.virtual_car;
+				fw_cust_opt_out.vp_alt_adjust = fw_cust_opt_in.vp_alt_adjust;
+				fw_cust_opt_out.lp_rel_vel = fw_cust_opt_in.lp_rel_vel;
+				_fw_cust_opt_pub.publish(fw_cust_opt_out);
+			}else if((int)cmd.param1 == 30){
+				fw_custom_options_s fw_cust_opt_in{};
+				_fw_cus_opt_sub.copy(&fw_cust_opt_in);
+				fw_custom_options_s fw_cust_opt_out{};
+				fw_cust_opt_out.timestamp = hrt_absolute_time();
+				fw_cust_opt_out.vp_alt_adjust = cmd.param2;
+				fw_cust_opt_out.decrab_mp = fw_cust_opt_in.decrab_mp;
+				fw_cust_opt_out.virtual_car = fw_cust_opt_in.virtual_car;
+				fw_cust_opt_out.decrab_runway = fw_cust_opt_in.decrab_runway;
+				fw_cust_opt_out.lp_rel_vel = fw_cust_opt_in.lp_rel_vel;
+				_fw_cust_opt_pub.publish(fw_cust_opt_out);
+			}else if((int)cmd.param1 == 31){
+				fw_custom_options_s fw_cust_opt_in{};
+				_fw_cus_opt_sub.copy(&fw_cust_opt_in);
+				fw_custom_options_s fw_cust_opt_out{};
+				fw_cust_opt_out.timestamp = hrt_absolute_time();
+				if((int)cmd.param2 == 1){
+					fw_cust_opt_out.lp_rel_vel = true;
+				}else{
+					fw_cust_opt_out.lp_rel_vel = false;
+				}
+				fw_cust_opt_out.decrab_mp = fw_cust_opt_in.decrab_mp;
+				fw_cust_opt_out.virtual_car = fw_cust_opt_in.virtual_car;
+				fw_cust_opt_out.vp_alt_adjust = fw_cust_opt_in.vp_alt_adjust;
+				fw_cust_opt_out.decrab_runway = fw_cust_opt_in.decrab_runway;
+				_fw_cust_opt_pub.publish(fw_cust_opt_out);
+			}else if((int)cmd.param1 == 29){
+				fw_custom_options_s fw_cust_opt_out{};
+				fw_cust_opt_out.timestamp = hrt_absolute_time();
+				fw_cust_opt_out.decrab_mp = false;
+				fw_cust_opt_out.virtual_car = false;
+				fw_cust_opt_out.decrab_runway = false;
+				fw_cust_opt_out.vp_alt_adjust = 0.0f;
+				fw_cust_opt_out.lp_rel_vel = false;
+				_fw_cust_opt_pub.publish(fw_cust_opt_out);
 			}else if((int)cmd.param1 == 15){
 				fw_custom_control_testing_mode_s fw_custom_control_testing_mode_set{};
 				fw_custom_control_testing_mode_set.timestamp = hrt_absolute_time();

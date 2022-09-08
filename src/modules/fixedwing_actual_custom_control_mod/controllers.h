@@ -102,6 +102,12 @@
 #include <uORB/topics/fw_custom_control_testing_states.h>
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_status_flags.h>
+#include <matrix/math.hpp>
+#include <mathlib/mathlib.h>
+#include <uORB/topics/mp_relative_dist.h>
+#include <uORB/topics/moving_platform_simulated.h>
+#include <uORB/topics/fw_custom_sm_status.h>
+#include <uORB/topics/fw_custom_options.h>
 
 //Graph plotting
 // #include <iostream>
@@ -164,12 +170,13 @@ public:
 	void reset_integrators();
 	// void vehicle_control_mode_poll();
 	void initialise_integrators(const Control_Data &state_data);
-	void state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3],const float dt);
-	void landing_point(Control_Data &state_data,float mp_pose[3],float mp_vel[3]);
+	void state_machine(Control_Data &state_data,float ref_out[4],float mp_pos[3],const float dt,bool mp_land);
+	void landing_point(Control_Data &state_data,float mp_pose[3],float mp_vel[3],bool mp_land);
 	float altitude_limit_intergrator_mpc(const Control_Data &state_data,float h_ref,const float dt);
 	float altitude_limit_intergrator_normal(const Control_Data &state_data,float h_ref,const float dt);
 	// void mpc_referance_generator(float h_ref,float v_ref,float mpc_ref[]);
 	float guidance_1_limited_intergrator(const Control_Data &state_data,float y_ref,const float dt);
+	void moving_platform_simulate(float dt);
 
 private:
 	void Run() override;
@@ -208,6 +215,8 @@ private:
 	uORB::Subscription _fw_custom_control_testing_lateral_sub{ORB_ID(fw_custom_control_testing_lateral)};
 	uORB::Subscription gps_pos_sub{ORB_ID(vehicle_gps_position)};
 	uORB::Subscription veh_status_flgs_sub{ORB_ID(vehicle_status_flags)};
+	uORB::Subscription _mp_rel_dist_sub{ORB_ID(mp_relative_dist)};
+	uORB::Subscription _fw_cust_opt_sub{ORB_ID(fw_custom_options)};
 
 	uORB::Publication<actuator_controls_s>		_actuators_0_pub;
 	//uORB::Publication<vehicle_attitude_setpoint_s>	_attitude_sp_pub;
@@ -218,6 +227,8 @@ private:
 	uORB::Publication<vehicle_command_s>	vehicle_command_pub{ORB_ID(vehicle_command)};
 	// uORB::Publication<fw_custom_control_testing_s>	fw_custom_control_testing_pub{ORB_ID(fw_custom_control_testing)};
 	uORB::Publication<fw_custom_control_testing_states_s>	_fw_custom_control_testing_states_pub{ORB_ID(fw_custom_control_testing_states)};
+	uORB::Publication<moving_platform_simulated_s>	_mp_simulated_pub{ORB_ID(moving_platform_simulated)};
+	uORB::Publication<fw_custom_sm_status_s>	_fw_cust_sm_status_pub{ORB_ID(fw_custom_sm_status)};
 
 	actuator_controls_s			actuators {};
 	vehicle_rates_setpoint_s		rates_sp {};
@@ -226,6 +237,8 @@ private:
 	fw_controllers_sm_s			sm_state{};
 	mpc_inputs_s				mpc_ins{};
 	fw_custom_control_testing_states_s      fw_custom_control_testing_states{};
+	moving_platform_simulated_s 		mp_sim{};
+	fw_custom_sm_status_s			fw_cust_sm_stat{};
 
 	perf_counter_t	_loop_perf;
 
@@ -243,8 +256,8 @@ private:
 	float dT_AS=0,dT_AS_lim=0,dR_LSA=0,dR_LSA_lim=0,dA_RR=0,dA_RR_lim=0,dF_DLC=0,dF_DLC_lim=0,dE_NSA=0,dE_NSA_lim=0;
 	float hdot_ref_int_mpc=0,hdot_ref_int_lim_mpc=0,hdot_ref_int_normal=0,hdot_ref_int_lim_normal=0,ydot_ref_int_lim=0,ydot_ref_int=0;
 	//State Machine
-	bool waypoint_END=false,END=false,Land=false,Abort=false,Anti_Abort=false,yaw_ctrl=false,Log_data=false;
-	float Tau_yaw=0,gamma=0,gamma_land=0,h_ref_SM=0,dg=0,dis_t=0,V_ground_check=0.0;
+	bool waypoint_END=false,END=false,Land=false,Abort=false,Anti_Abort=false,yaw_ctrl=false,Log_data=false,Go_Around_land=false,GAL_reset=false,Abort_status=false,decrab_opt_mp=false,decrab_opt_runway=false;
+	float Tau_yaw=0,gamma=0,gamma_land=0,h_ref_SM=0,dg=0,dis_t=0,V_ground_check=0.0,Tau_ct=0.0f,vp_alt_adjust=0.0f;
 	int state=0;
 	float waypoint_early_switching_point = 0.0;
 	//Graph Plotting
@@ -255,6 +268,10 @@ private:
 	// Moving platform
 	// std::vector<float> TD_position={0.00,0.00,0.00};//Touch Down point
 	float TD_position[3]={0.00,0.00,0.00};//Touch Down point
+	float Virtual_platform_altitude = 0.0f,mp_position[3] = {0.0f,0.0f,0.0f},mp_velo[3] = {0.0f,0.0f,0.0f};
+	float mp_sim_pose[3] = {0.0f,0.0f,0.0f}, mp_sim_vel[3] = {0.0f,0.0f,0.0f}, mp_sim_speed = 3.0f, mp_sim_pose_runway_mem[2] = {0.0f,0.0f};
+	float mp_sim_noise = 0.0f;
+	bool lp_rel_vel = false;
 
 	// MPC
 	int MPC_P=25;//choose
@@ -286,6 +303,14 @@ private:
 
 	// logs
 	float dA_ctrl=0,dE_ctrl=0,dR_ctrl=0,dT_ctrl=0,dF_ctrl=0;
+
+	//Moving Platform Landing Procedure
+	float destinations[8][2]={{0.0f,0.0f},{-55.5401,192.1336},{-295.7070,122.7085},{-198.5119,-213.5252},{-101.3168,-549.7590},{138.8502,-480.3339},{97.1951,-336.2337},{0.0f,0.0f}};//HRF Runway Aligned Waypoints Actual (added extra waypoint for capture)
+	int destination_size=sizeof(destinations)/sizeof(destinations[0])-1;
+	float psi_runway = atan2((destinations[6][0]-destinations[5][0]),(destinations[6][1]-destinations[5][1]));
+	float y_ct_mp = 0.0f;
+	uint64_t _last_run_mp = 0;
+	// double arm_lat=0.00,arm_lon=0.00;
 
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::FW_MAN_P_MAX>) _param_fw_man_p_max,

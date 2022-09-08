@@ -193,6 +193,10 @@ set(msg_files
 	fw_custom_control_testing_mode.msg
 	fw_custom_control_testing_lateral.msg
 	fw_custom_control_testing_states.msg
+	mp_relative_dist.msg
+	moving_platform_simulated.msg
+	fw_custom_sm_status.msg
+	fw_custom_options.msg
 )
 
 if(NOT px4_constrained_flash_build)

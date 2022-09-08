@@ -62,6 +62,7 @@
 #include <uORB/topics/gps_dump.h>
 #include <uORB/topics/gps_inject_data.h>
 #include <uORB/topics/sensor_gps.h>
+#include <uORB/topics/mp_relative_dist.h>
 
 #ifndef CONSTRAINED_FLASH
 # include "devices/src/ashtech.h"
@@ -170,9 +171,11 @@ private:
 
 	sensor_gps_s			_report_gps_pos{};				///< uORB topic for gps position
 	satellite_info_s		*_p_report_sat_info{nullptr};			///< pointer to uORB topic for satellite info
+	mp_relative_dist_s 		mp_rel_dist_pack{};
 
 	uORB::PublicationMulti<sensor_gps_s>	_report_gps_pos_pub{ORB_ID(sensor_gps)};	///< uORB pub for gps position
 	uORB::PublicationMulti<satellite_info_s>	_report_sat_info_pub{ORB_ID(satellite_info)};		///< uORB pub for satellite info
+	uORB::Publication<mp_relative_dist_s>	_mp_rel_dist_pub{ORB_ID(mp_relative_dist)};
 
 	float				_rate{0.0f};					///< position update rate
 	float				_rate_rtcm_injection{0.0f};			///< RTCM message injection rate
@@ -758,7 +761,7 @@ GPS::run()
 		/* FALLTHROUGH */
 		case GPS_DRIVER_MODE_UBX:
 			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info,
-						   gps_ubx_dynmodel, heading_offset, ubx_mode);
+						   &mp_rel_dist_pack, gps_ubx_dynmodel, heading_offset, ubx_mode);
 			set_device_type(DRV_GPS_DEVTYPE_UBX);
 			break;
 #ifndef CONSTRAINED_FLASH
@@ -1065,6 +1068,8 @@ GPS::publish()
 		// The uORB message definition requires this data to be set to a NAN if no new valid data is available.
 		_report_gps_pos.heading = NAN;
 		_is_gps_main_advertised.store(true);
+		mp_rel_dist_pack.timestamp = hrt_absolute_time();
+		_mp_rel_dist_pub.publish(mp_rel_dist_pack);
 	}
 }
 

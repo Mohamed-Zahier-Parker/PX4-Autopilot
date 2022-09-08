@@ -92,6 +92,10 @@
 #include <stdlib.h>
 #include <uORB/topics/fw_custom_control_testing_mode.h>
 #include <uORB/topics/fw_custom_control_testing_lateral.h>
+#include <uORB/topics/mp_relative_dist.h>
+#include <uORB/topics/fw_custom_sm_status.h>
+#include <uORB/topics/fw_custom_options.h>
+#include <uORB/topics/moving_platform_simulated.h>
 
 using math::constrain;
 using systemlib::Hysteresis;
@@ -413,6 +417,8 @@ private:
 	uORB::Subscription					_vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
 	uORB::Subscription					_vtol_vehicle_status_sub{ORB_ID(vtol_vehicle_status)};
 
+	uORB::Subscription 					_fw_cus_opt_sub{ORB_ID(fw_custom_options)};
+
 	uORB::SubscriptionInterval				_parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
 	uORB::SubscriptionMultiArray<battery_status_s, battery_status_s::MAX_INSTANCES> _battery_status_subs{ORB_ID::battery_status};
@@ -448,6 +454,7 @@ private:
 	uORB::Publication<fw_custom_control_testing_s> _fw_custom_control_testing_pub{ORB_ID(fw_custom_control_testing)};
 	uORB::Publication<fw_custom_control_testing_mode_s> _fw_custom_control_testing_mode_pub{ORB_ID(fw_custom_control_testing_mode)};
 	uORB::Publication<fw_custom_control_testing_lateral_s> _fw_custom_control_testing_lateral_pub{ORB_ID(fw_custom_control_testing_lateral)};
+	uORB::Publication<fw_custom_options_s> 	_fw_cust_opt_pub{ORB_ID(fw_custom_options)};
 
 	orb_advert_t _mavlink_log_pub{nullptr};
 };

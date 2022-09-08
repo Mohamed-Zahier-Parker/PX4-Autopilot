@@ -12,3 +12,5 @@ bool mpc_altitude_mode			# mpc altitude mode enabler
 bool mpc_ramp_mode			# mpc ramp mode enabler
 bool land_mode				# classical controller state machine mode enabler
 bool mpc_land_mode 			# mpc controller state machine mode enabler
+bool mvland_mode 			# moving platform land mode enabler
+bool mpc_mvland_mode			# mpc controller moving platform land mode enabler

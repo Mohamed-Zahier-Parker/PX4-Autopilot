@@ -119,6 +119,9 @@ void LoggedTopics::add_default_topics()
 	add_topic("fw_custom_control_testing_mode", 200);
 	// add_topic("fw_custom_control_testing_lateral", 20);
 	add_topic("fw_custom_control_testing_states", 20);
+	add_topic("mp_relative_dist",100);
+	add_topic("moving_platform_simulated",20);
+	add_topic("fw_custom_options",1000);
 
 	// Control allocation topics
 	add_topic("vehicle_actuator_setpoint", 20);
