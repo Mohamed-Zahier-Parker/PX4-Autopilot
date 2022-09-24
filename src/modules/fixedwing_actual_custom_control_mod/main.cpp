@@ -466,7 +466,7 @@ void Controllers::init_ECL_variables(){
 	Tau_ct = 7.0;
 	Virtual_platform_altitude = 3.0;
 	srand(time(0));
-	mp_sim_noise = 0.03f;
+	mp_sim_noise = 0.00f;
 }
 
 void Controllers::initialise_NSADLC_HPF()
@@ -1022,7 +1022,7 @@ void Controllers::state_machine(Control_Data &state_data,float ref_out[4],float 
 
 		if(mp_land && !Go_Around_land){
 				if((L_track-_x_guide-d_flare)<dis_t){ //continous UAV state check
-					if(state_data.airspeed>(float)17.00 && state_data.airspeed<(float)19.00 && state_data.h_dot>(float)-1.60 && abs(state_data.psi_crab_error)<(float)(15.0/180*M_PI) && state_data.theta>(float)(-6.0/180*M_PI) && abs(state_data.phi)<(float)(20.0/180*M_PI) && abs(y_ct_mp - state_data.y)<(float)1.50 && abs(y_ct_mp)<(float)3.0 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)0.10){
+					if(state_data.airspeed>(float)16.00 && state_data.airspeed<(float)20.00 && state_data.h_dot>(float)-2.60 && abs(state_data.psi_crab_error)<(float)(30.0/180*M_PI) && state_data.theta>(float)(-30.0/180*M_PI) && abs(state_data.phi)<(float)(30.0/180*M_PI) && abs(y_ct_mp - state_data.y)<(float)3.50 && abs(y_ct_mp)<(float)3.0 && abs((float)h_ref_SM-(-(float)state_data.posz))<(float)1.20){
 						if((L_track-_x_guide-d_flare)<dis_t && (L_track-_x_guide-d_flare)>dd){
             						if(state==3){
 								state=4;//Pre-landing
