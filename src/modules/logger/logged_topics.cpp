@@ -106,7 +106,8 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_global_position", 200);
 	add_topic("vehicle_gps_position", 500);
 	add_topic("vehicle_land_detected");
-	add_topic("vehicle_local_position", 100);
+	// add_topic("vehicle_local_position", 100);
+	add_topic("vehicle_local_position", 20); //Increase logging speed to match fw_cust ontroller states logging
 	// add_topic("vehicle_local_position_setpoint", 100); //disabled
 	add_topic("vehicle_magnetometer", 200);
 	// add_topic("vehicle_rates_setpoint", 20); //disabled
